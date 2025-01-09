@@ -1,0 +1,9 @@
+{
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-19",
+            "path": "C:\\Program Files\\Zulu\\zulu-21\bin\\",
+            "default": true
+        }
+    ]
+}
