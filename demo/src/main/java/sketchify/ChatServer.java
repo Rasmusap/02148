@@ -18,7 +18,7 @@ public class ChatServer {
         repository.add("chat", chatSpace);
 
         // 3) Add a gate for client connections (same IP/port as you want)
-        String gateURI = "tcp://10.209.248.40:8753/?keep";
+        String gateURI = "tcp://192.168.0.212:8753/?keep";
         repository.addGate(gateURI);
         System.out.println("Chat server is running on " + gateURI);
 
