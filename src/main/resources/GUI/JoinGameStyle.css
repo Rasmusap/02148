@@ -1,0 +1,26 @@
+.button {
+    -fx-font-size: 25;
+    -fx-font-weight: bold;
+    -fx-font-style: italic;
+    -fx-background-radius: 50px;
+    -fx-font-family: "Lucida Console";
+    -fx-background-color: black;
+}
+
+#TitleJoinGame {
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+}
+
+#JoinDirectlyButton:hover {
+    -fx-background-color: grey;
+}
+
+#FindGame:hover {
+    -fx-background-color: grey;
+}
+
+#GoBack:hover {
+    -fx-background-color: grey;
+}

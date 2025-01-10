@@ -1,4 +1,4 @@
-package sketchify;
+package Sketchify;
 
 import javafx.application.Application;
 import javafx.event.ActionEvent;

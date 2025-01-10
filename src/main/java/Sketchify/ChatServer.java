@@ -1,12 +1,12 @@
-package sketchify;
-
-import java.util.List;
-import java.util.Scanner;
+package Sketchify;
 
 import org.jspace.ActualField;
 import org.jspace.FormalField;
 import org.jspace.SequentialSpace;
 import org.jspace.SpaceRepository;
+
+import java.util.List;
+import java.util.Scanner;
 
 public class ChatServer {
     public static void main(String[] args) {

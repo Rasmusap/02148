@@ -1,0 +1,38 @@
+#TitleSketchify {
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+}
+.button {
+    -fx-font-size: 25;
+    -fx-font-weight: bold;
+    -fx-font-style: italic;
+    -fx-background-radius: 50px;
+    -fx-font-family: "Lucida Console";
+}
+
+#HostGameButton {
+    -fx-background-color: green;
+}
+
+#JoinGameButton {
+    -fx-background-color: blue;
+}
+#ExitGameButton {
+    -fx-background-color: red;
+}
+#HostGameButton:hover {
+    -fx-background-color: black;
+}
+#JoinGameButton:hover {
+    -fx-background-color: black;
+}
+#ExitGameButton:hover {
+    -fx-background-color: black;
+}
+#gameModeText {
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+    -fx-font-size: 25;
+}
