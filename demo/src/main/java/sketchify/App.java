@@ -47,7 +47,7 @@ public class App extends Application {
     
         @Override
         public void start(Stage primaryStage) {
-            String serverURI = "tcp://192.168.0.212:8753/chat?keep";
+            String serverURI = "tcp://10.209.248.40:8753/chat?keep";
     
             try {
                 this.space = new RemoteSpace(serverURI);
@@ -137,7 +137,7 @@ public class App extends Application {
                 gc.lineTo(event.getX(), event.getY());
                 gc.stroke();
                 try {
-                this.space.put(new Draw(event.getX(), event.getY(), "start"));
+                this.space.put(new Draw(event.getX(), event.getY(), "draw"));
             } catch (Exception e) {
                 e.printStackTrace();
             }
