@@ -10,40 +10,40 @@ import org.jspace.SpaceRepository;
 
 public class ChatServer {
     public static void main(String[] args) {
-        // 1) Create a repository for tuple spaces
         SpaceRepository repository = new SpaceRepository();
 
-        // 2) Create a chat space and add it to the repository
         SequentialSpace chatSpace = new SequentialSpace();
+        SequentialSpace drawSpace = new SequentialSpace();
+
         repository.add("chat", chatSpace);
+        repository.add("draw", drawSpace);
 
-        // 3) Add a gate for client connections (same IP/port as you want)
         String gateURI = "tcp://10.209.248.40:8753/?keep";
-        repository.addGate(gateURI);
-        System.out.println("Chat server is running on " + gateURI);
+        try {
+            repository.addGate(gateURI);
+            System.out.println("[Server] Successfully opened gate on " + gateURI);
+        } catch (Exception e) {
+            System.err.println("[Server] ERROR: Could not open gate on " + gateURI);
+            e.printStackTrace();
+            return;
+        }
+        System.out.println("[Server] Spaces available: \"chat\" and \"draw\"");
 
-        // 4) Thread that polls the space and prints new messages to server console
         new Thread(() -> {
-            int lastPrinted = 0; // how many messages we've already logged
-            while (true) {
+            int lastPrinted = 0; // how many messages we've already processed
+            while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    // Get ALL current messages: ("message", <String>)
                     List<Object[]> messages = chatSpace.queryAll(
-                            new ActualField("message"),
-                            new FormalField(String.class)
+                        new ActualField("message"),
+                        new FormalField(String.class)
                     );
-
-                    // Print only new messages
                     for (int i = lastPrinted; i < messages.size(); i++) {
-                        Object[] msg = messages.get(i);
-                        String text = (String) msg[1];
-                        System.out.println("Server sees: " + text);
+                        String text = (String) messages.get(i)[1];
+                        System.out.println("[Server-Chat] sees: " + text);
                     }
                     lastPrinted = messages.size();
 
-                    // Small sleep to avoid spamming the CPU
-                    Thread.sleep(300);
-
+                    Thread.sleep(300);  // small delay
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -51,25 +51,56 @@ public class ChatServer {
                     e.printStackTrace();
                 }
             }
-        }).start();
+        }, "ChatLogger").start();
 
-        // 5) Thread that reads from the server's console and puts messages into the space
         new Thread(() -> {
             try (Scanner scanner = new Scanner(System.in)) {
-                while (true) {
-                    String msg = scanner.nextLine();          // Read text from server console
-                    chatSpace.put("message", "[Server] " + msg);  // Put it in the space
+                System.out.println("[Server] Type something here to send a chat message as [Server].");
+                while (!Thread.currentThread().isInterrupted()) {
+                    String msg = scanner.nextLine(); // read from server console
+                    chatSpace.put("message", "[Server] " + msg);
+                    System.out.println("[Server] You typed: " + msg + " (sent to chatSpace)");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }).start();
+        }, "ServerConsoleInput").start();
 
-        // 6) Keep the server alive indefinitely
+        new Thread(() -> {
+            int lastDrawLogged = 0;
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    List<Object[]> draws = drawSpace.queryAll(
+                        new ActualField("draw"),
+                        new FormalField(Double.class),
+                        new FormalField(Double.class),
+                        new FormalField(String.class)
+                    );
+                    for (int i = lastDrawLogged; i < draws.size(); i++) {
+                        Object[] tuple = draws.get(i);
+                        double x = (double) tuple[1];
+                        double y = (double) tuple[2];
+                        String action = (String) tuple[3];
+                        System.out.println("[Server-Draw] sees: (" + x + ", " + y + "), action=" + action);
+                    }
+                    lastDrawLogged = draws.size();
+
+                    Thread.sleep(300);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }, "DrawLogger").start();
+
+        System.out.println("[Server] Running indefinitely... Press Ctrl+C to stop.");
         while (true) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
+                System.err.println("[Server] Interrupted! Stopping server.");
                 Thread.currentThread().interrupt();
                 break;
             }

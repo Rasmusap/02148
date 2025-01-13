@@ -1,7 +1,7 @@
 package sketchify;
 
 public class Draw {
-    double x, y;
+    double x,y;
     String actionType;
 
     public Draw(double x, double y, String actionType) {
