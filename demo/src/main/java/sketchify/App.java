@@ -23,6 +23,9 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
@@ -40,10 +43,15 @@ public class App extends Application {
     String word2 = generateRandomWord();
     String word3 = generateRandomWord();
     String selectedWord = "";
-    private int lastCount = 0;
+    private int lastDrawCount = 0;
+    private int lastChatCount = 0;
     
-    private RemoteSpace space;
     private RemoteSpace drawSpace;
+    private RemoteSpace chatSpace;
+
+    private TextArea chatDisplay;
+    private TextField chatInput;
+
     private Canvas canvas;
     private GraphicsContext gc;
     
@@ -53,9 +61,11 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        String drawURI = "tcp://10.209.248.40:8753/draw?keep";
+        String chatURI = "tcp://192.168.0.247:8753/chat?keep";
+        String serverURI = "tcp://192.168.0.247:8753/draw?keep";
         try {
-            drawSpace = new RemoteSpace(drawURI);
+            chatSpace = new RemoteSpace(chatURI);
+            drawSpace = new RemoteSpace(serverURI);
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -85,7 +95,7 @@ public class App extends Application {
         
         HBox right = new HBox();
         right.setBackground(new Background(new BackgroundFill(Color.GREEN, CornerRadii.EMPTY, Insets.EMPTY)));
-        right.setPrefWidth(200);
+        right.setPrefWidth(300);
         HBox bottom = new HBox();
         bottom.setBackground(new Background(new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, Insets.EMPTY)));
         bottom.setPrefHeight(100);
@@ -100,8 +110,34 @@ public class App extends Application {
 
         Label wordlabel = new Label("");
         wordlabel.setStyle("-fx-font-size: 20px; -fx-text-fill: black;");
+        
+        VBox chatBox = new VBox(10);
+        chatBox.setPadding(new Insets(10));
+        chatBox.setPrefWidth(300);
 
-        canvas = new Canvas(1100, 530);
+        chatDisplay = new TextArea();
+        chatDisplay.setEditable(false);
+        chatDisplay.setWrapText(true);
+        chatDisplay.setPrefHeight(500);
+
+        ScrollPane chatScrollPane = new ScrollPane(chatDisplay);
+        chatScrollPane.setFitToWidth(true);
+        chatScrollPane.setPrefHeight(300);
+
+        chatInput = new TextField();
+        chatInput.setPromptText("Type a message...");
+        chatInput.setPrefWidth(220);
+
+        Button sendBtn = new Button("Send");
+        sendBtn.setOnAction(e -> sendChatMessage());
+
+        HBox chatInputBox = new HBox(10, chatInput, sendBtn);
+        chatInputBox.setAlignment(Pos.CENTER);
+        chatBox.getChildren().addAll(chatScrollPane, chatInputBox);
+
+        right.getChildren().addAll(chatBox);
+
+        canvas = new Canvas(1000, 530);
         gc = canvas.getGraphicsContext2D();
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(2);
@@ -136,17 +172,21 @@ public class App extends Application {
                 ex.printStackTrace();
             }
         });
-
+        
         canvas.setOnMouseDragged(e -> {
-            gc.lineTo(e.getX(), e.getY());
+            double x = e.getX();
+            double y = e.getY();
+        
+            gc.lineTo(x, y);
             gc.stroke();
             try {
-                drawSpace.put("draw", e.getX(), e.getY(), "draw");
+                drawSpace.put("draw", x, y, "draw");
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 ex.printStackTrace();
             }
         });
+        
 
         centerVBox.getChildren().addAll(wordlabel, canvas);
         center.getChildren().add(centerVBox);
@@ -166,9 +206,55 @@ public class App extends Application {
         primaryStage.setScene(new Scene(root, 900, 600));
         primaryStage.show();
 
+        Thread chatListener = new Thread(this::listenForChatMessages, "ChatListener");
+        chatListener.setDaemon(true);
+        chatListener.start();
+
         Thread drawListener = new Thread(this::listenForDraws, "DrawListener");
         drawListener.setDaemon(true);
         drawListener.start();
+    }
+
+    private void sendChatMessage() {
+        String text = chatInput.getText().trim();
+        if (!text.isEmpty()) {
+            try {
+                chatSpace.put("message", "you", text);
+                chatDisplay.appendText("You: " + text + "\n");
+                chatInput.clear();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private void listenForChatMessages() {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                List<Object[]> messages = chatSpace.queryAll(
+                    new ActualField("message"),
+                    new FormalField(String.class),
+                    new FormalField(String.class)
+                );
+                if (messages.size() > lastChatCount) {
+                    for (int i = lastChatCount; i < messages.size(); i++) {
+                        String sender = (String) messages.get(i)[1];
+                        String text = (String) messages.get(i)[2];
+                        if (!"you".equals(sender)) {
+                            Platform.runLater(() -> chatDisplay.appendText("Friend: " + text + "\n"));
+                        }
+                    }
+                    lastChatCount = messages.size();
+                }
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void listenForDraws() {
@@ -180,8 +266,8 @@ public class App extends Application {
                         new FormalField(Double.class),
                         new FormalField(String.class)
                 );
-                if (draws.size() > lastCount) {
-                    for (int i = lastCount; i < draws.size(); i++) {
+                if (draws.size() > lastDrawCount) {
+                    for (int i = lastDrawCount; i < draws.size(); i++) {
                         Object[] tuple = draws.get(i);
                         double x = (double) tuple[1];
                         double y = (double) tuple[2];
@@ -198,7 +284,7 @@ public class App extends Application {
                             }
                         });
                     }
-                    lastCount = draws.size();
+                    lastDrawCount = draws.size();
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

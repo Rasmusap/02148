@@ -18,7 +18,7 @@ public class ChatServer {
         repository.add("chat", chatSpace);
         repository.add("draw", drawSpace);
 
-        String gateURI = "tcp://10.209.248.40:8753/?keep";
+        String gateURI = "tcp://192.168.0.247:8753/?keep";
         try {
             repository.addGate(gateURI);
             System.out.println("[Server] Successfully opened gate on " + gateURI);
@@ -57,7 +57,7 @@ public class ChatServer {
             try (Scanner scanner = new Scanner(System.in)) {
                 System.out.println("[Server] Type something here to send a chat message as [Server].");
                 while (!Thread.currentThread().isInterrupted()) {
-                    String msg = scanner.nextLine(); // read from server console
+                    String msg = scanner.nextLine();
                     chatSpace.put("message", "[Server] " + msg);
                     System.out.println("[Server] You typed: " + msg + " (sent to chatSpace)");
                 }
