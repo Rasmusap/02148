@@ -5,6 +5,14 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.stage.Stage;
 
+import java.util.List;
+import java.util.Scanner;
+
+import org.jspace.ActualField;
+import org.jspace.FormalField;
+import org.jspace.SequentialSpace;
+import org.jspace.SpaceRepository;
+
 import java.io.IOException;
 
 public class HostGameController {

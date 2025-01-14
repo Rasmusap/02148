@@ -43,10 +43,10 @@ public class ChatServer {
                     }
                     lastPrinted = messages.size();
 
-                    Thread.sleep(300);  // small delay
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+//                    Thread.sleep(3);  // small delay
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                    break;
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -85,25 +85,25 @@ public class ChatServer {
                     }
                     lastDrawLogged = draws.size();
 
-                    Thread.sleep(300);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+//                    Thread.sleep(1);
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                    break;
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }, "DrawLogger").start();
 
-        System.out.println("[Server] Running indefinitely... Press Ctrl+C to stop.");
-        while (true) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                System.err.println("[Server] Interrupted! Stopping server.");
-                Thread.currentThread().interrupt();
-                break;
-            }
-        }
+//        System.out.println("[Server] Running indefinitely... Press Ctrl+C to stop.");
+//        while (true) {
+//            try {
+////                Thread.sleep();
+//            } catch (InterruptedException e) {
+//                System.err.println("[Server] Interrupted! Stopping server.");
+//                Thread.currentThread().interrupt();
+//                break;
+//            }
+//        }
     }
 }

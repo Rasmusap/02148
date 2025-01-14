@@ -123,6 +123,7 @@ public class SketchifyController implements Initializable {
     public void initialize(URL url, ResourceBundle resourceBundle) {
         //Initialize random word.
         word1 = generateRandomWord();
+        selectedWord = word1;
 
         CurrentWord.setText(word1);
 
@@ -269,10 +270,10 @@ public class SketchifyController implements Initializable {
                     }
                     lastDrawCount = draws.size();
                 }
-                Thread.sleep(300);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
+//                Thread.sleep(300);
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//                break;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -297,6 +298,7 @@ public class SketchifyController implements Initializable {
 
                 // Clear the text field
                 guessTextField.clear();
+                checkGuess(guess);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 e.printStackTrace();
@@ -310,7 +312,7 @@ public class SketchifyController implements Initializable {
         if (message.trim().equalsIgnoreCase(selectedWord)) {
             // Maybe show in the PlayerList area or console
             Platform.runLater(() -> {
-                PlayerList.appendText("You guessed the word correctly!\n");
+                Chat.appendText("You guessed the word correctly!\n");
             });
             guessedCorrectly = true;
         }
