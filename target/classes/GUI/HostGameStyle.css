@@ -1,0 +1,30 @@
+.button {
+    -fx-font-size: 25;
+    -fx-font-weight: bold;
+    -fx-font-style: italic;
+    -fx-background-radius: 50px;
+    -fx-font-family: "Lucida Console";
+    -fx-background-color: black;
+}
+
+#TitleHostGame {
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+}
+#InvitePlayersButton:hover {
+    -fx-background-color: grey;
+}
+
+#StartGameButton:hover {
+    -fx-background-color: grey;
+}
+
+#GoBack:hover {
+    -fx-background-color: grey;
+}
+#Lobby {
+    -fx-font-family: "Lucida Console";
+    -fx-font-weight: bold;
+    -fx-font-style: italic;
+}

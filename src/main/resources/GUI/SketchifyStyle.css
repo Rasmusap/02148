@@ -1,0 +1,80 @@
+
+#Title {
+    -fx-font-size: 50;
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+}
+#CanvasBackground {
+    -fx-border-color: blue;
+}
+
+#Timer {
+    -fx-font-size: 25;
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+}
+#PlayerListTitle {
+    -fx-font-size: 25;
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+}
+#CurrentWord {
+    -fx-font-size: 25;
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+}
+#blueButton {
+    -fx-background-color: blue;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+}
+#redButton {
+    -fx-background-color: red;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+}
+#blackButton {
+    -fx-background-color: black;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+}
+#yellowButton {
+    -fx-background-color: yellow;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+}
+
+#greenButton {
+    -fx-background-color: green;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+}
+
+#pinkButton {
+    -fx-background-color: pink;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+}
+#brownButton {
+    -fx-background-color: brown;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+}
+#turquoiseButton {
+    -fx-background-color: turquoise;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+}
+
+#blueButton:hover {
+    -fx-background-color: black;
+}
+#guessTextField {
+    -fx-font-size: 25;
+    -fx-font-family: "Lucida Console";
+}
+

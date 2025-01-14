@@ -2,26 +2,30 @@ package GUI;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.stage.Stage;
 
 import java.io.IOException;
 
 public class HostGameController {
-
-    private final String fxml = "home-page.fxml";
-    private final String css = "HomePageStyle.css";
-    private final String title = "Home page";
-
     @FXML
+    private Button StartGameButton;
     public void InvitePlayers(ActionEvent e) {
         System.out.println("Inviting Players...");
     }
 
-    public void StartGame(ActionEvent e) {
-        System.out.println("Starting Game...");
+    public void StartGame(ActionEvent e) throws IOException {
+        SceneController controller = new SceneController();
+        controller.switchToGame(e);
+        Stage stage = (Stage) StartGameButton.getScene().getWindow();
+        stage.close();
     }
 
     public void GoBack(ActionEvent e) throws IOException {
         SceneController controller = new SceneController();
+        String title = "Home page";
+        String css = "HomePageStyle.css";
+        String fxml = "home-page.fxml";
         controller.switchToScene(e, fxml, css, title);
     }
 }

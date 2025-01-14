@@ -29,10 +29,7 @@ public class HomePage extends javafx.application.Application {
 
         stage.setTitle("Home Page");
         stage.setScene(scene);
+        stage.setResizable(false);
         stage.show();
-    }
-
-    public void switchToHostGame(ActionEvent event) {
-
     }
 }

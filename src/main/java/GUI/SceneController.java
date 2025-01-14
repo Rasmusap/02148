@@ -11,16 +11,13 @@ import java.io.IOException;
 import java.util.Objects;
 
 public class SceneController {
-    private Stage stage;
-    private Scene scene;
-    private Parent root;
 
     public void switchToScene(ActionEvent event, String sceneTo, String cssNewScene, String title) throws IOException {
-        root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource(sceneTo)));
+        Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource(sceneTo)));
 
 
-        stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
-        scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        Scene scene = new Scene(root);
 
         String css = this.getClass().getResource(cssNewScene).toExternalForm();
         scene.getStylesheets().add(css);
@@ -29,6 +26,13 @@ public class SceneController {
 
 
         stage.setScene(scene);
+        stage.setResizable(false);
         stage.show();
+    }
+
+    public void switchToGame(ActionEvent event) throws IOException {
+        SketchifyGame sketchifyGame = new SketchifyGame();
+        Stage stage = new Stage();
+        sketchifyGame.start(stage);
     }
 }
