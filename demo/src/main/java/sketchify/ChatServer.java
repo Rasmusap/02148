@@ -30,7 +30,7 @@ public class ChatServer {
         System.out.println("[Server] Spaces available: \"chat\" and \"draw\"");
 
         new Thread(() -> {
-            int lastPrinted = 0; // how many messages we've already processed
+            int lastPrinted = 0;
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     List<Object[]> messages = chatSpace.queryAll(

@@ -14,8 +14,11 @@ import org.jspace.ActualField;
 import org.jspace.FormalField;
 import org.jspace.RemoteSpace;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -26,14 +29,18 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class App extends Application {
 
@@ -43,6 +50,9 @@ public class App extends Application {
     String word2 = generateRandomWord();
     String word3 = generateRandomWord();
     String selectedWord = "";
+    double x = 0;
+    double y = 0;
+    int seconds = 60;
     private int lastDrawCount = 0;
     private int lastChatCount = 0;
     
@@ -51,10 +61,15 @@ public class App extends Application {
 
     private TextArea chatDisplay;
     private TextField chatInput;
+    private Label wordlabel;
+    private Label guessedField;
+    private Button sendBtn;
 
     private Canvas canvas;
     private GraphicsContext gc;
-    
+    private String actiontype = "";
+    private Timeline timeline;
+
     public static void main(String[] args) {
         launch(args);
     }
@@ -80,6 +95,17 @@ public class App extends Application {
         top.setBackground(new Background(new BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
         top.setPrefHeight(100);
 
+        Label timerLabel = new Label();
+        timerLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: white;");
+        initializeTimeline(timerLabel);
+    
+        HBox.setHgrow(timerLabel, Priority.ALWAYS);
+
+        guessedField = new Label();
+        guessedField.setPrefWidth(250); 
+        guessedField.setStyle("-fx-font-size: 16px; -fx-text-fill: white;");
+
+        HBox.setHgrow(guessedField, Priority.ALWAYS);
         Button label1 = new Button(word1);
         Button label2 = new Button(word2);
         Button label3 = new Button(word3);
@@ -96,6 +122,8 @@ public class App extends Application {
         HBox right = new HBox();
         right.setBackground(new Background(new BackgroundFill(Color.GREEN, CornerRadii.EMPTY, Insets.EMPTY)));
         right.setPrefWidth(300);
+        right.setPadding(new Insets(0, 20, 0, 0));
+
         HBox bottom = new HBox();
         bottom.setBackground(new Background(new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, Insets.EMPTY)));
         bottom.setPrefHeight(100);
@@ -108,7 +136,7 @@ public class App extends Application {
         centerVBox.setAlignment(Pos.TOP_CENTER);
         centerVBox.setSpacing(10);
 
-        Label wordlabel = new Label("");
+        wordlabel = new Label("");
         wordlabel.setStyle("-fx-font-size: 20px; -fx-text-fill: black;");
         
         VBox chatBox = new VBox(10);
@@ -118,18 +146,24 @@ public class App extends Application {
         chatDisplay = new TextArea();
         chatDisplay.setEditable(false);
         chatDisplay.setWrapText(true);
-        chatDisplay.setPrefHeight(500);
+        chatDisplay.setPrefHeight(220);
 
         ScrollPane chatScrollPane = new ScrollPane(chatDisplay);
         chatScrollPane.setFitToWidth(true);
-        chatScrollPane.setPrefHeight(300);
+        chatScrollPane.setPrefHeight(220);
 
         chatInput = new TextField();
         chatInput.setPromptText("Type a message...");
-        chatInput.setPrefWidth(220);
+        chatInput.setPrefWidth(200);
 
-        Button sendBtn = new Button("Send");
+        sendBtn = new Button("Send");
         sendBtn.setOnAction(e -> sendChatMessage());
+
+        chatBox.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                sendChatMessage();
+            }
+        });
 
         HBox chatInputBox = new HBox(10, chatInput, sendBtn);
         chatInputBox.setAlignment(Pos.CENTER);
@@ -141,6 +175,16 @@ public class App extends Application {
         gc = canvas.getGraphicsContext2D();
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(2);
+
+        StackPane centerPane = new StackPane();
+        centerPane.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+
+        centerPane.widthProperty().addListener((obs, oldW, newW) -> {
+            canvas.setWidth(newW.doubleValue());
+        });
+        centerPane.heightProperty().addListener((obs, oldH, newH) -> {
+            canvas.setHeight(newH.doubleValue());
+        });
 
         label1.setOnAction((e) -> {
             wordlabel.setText(word1);
@@ -161,37 +205,16 @@ public class App extends Application {
             parent.getChildren().removeAll(label1, label2, label3);
         });
 
-        canvas.setOnMousePressed(e -> {
-            gc.beginPath();
-            gc.moveTo(e.getX(), e.getY());
-            gc.stroke();
-            try {
-                drawSpace.put("draw", e.getX(), e.getY(), "start");
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-                ex.printStackTrace();
-            }
-        });
-        
-        canvas.setOnMouseDragged(e -> {
-            double x = e.getX();
-            double y = e.getY();
-        
-            gc.lineTo(x, y);
-            gc.stroke();
-            try {
-                drawSpace.put("draw", x, y, "draw");
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-                ex.printStackTrace();
-            }
-        });
-        
+        Draw draw = new Draw(x, y, actiontype);
+
+        draw.isPressed(canvas, gc, drawSpace);
+
+        draw.isDragged(canvas, gc, drawSpace);
 
         centerVBox.getChildren().addAll(wordlabel, canvas);
         center.getChildren().add(centerVBox);
 
-        top.getChildren().addAll(label1, label2, label3);
+        top.getChildren().addAll(label1, label2, label3, guessedField, timerLabel);
 
         Button clear = new Button("Clear canvas");
         clear.setOnAction(event -> gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight()));
@@ -215,12 +238,64 @@ public class App extends Application {
         drawListener.start();
     }
 
+    private void checkGuess(String message) {
+        if (message.trim().equalsIgnoreCase(selectedWord)) {
+            guessedField.setText(getSender() + " has guessed the word right");
+            chatInput.setEditable(false);
+            sendBtn.setDisable(true);
+        }
+    }
+
+    public void initializeTimeline(Label timerLabel) {
+        timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            if (seconds > 0) {
+                seconds--;
+                timerLabel.setText("Time: " + seconds + " s");
+            } else {
+                timerLabel.setText("Time's up!");
+                timeline.stop();
+            }
+        }));
+    
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.play();
+    }
+
+    @Override
+    public void stop() throws Exception {
+        if (timeline != null) {
+            timeline.stop();
+        }
+        super.stop();
+    }
+
+    private String getSender() {
+        String sender = "";
+        try {
+            List<Object[]> messages = chatSpace.queryAll(
+                new ActualField("message"),
+                new FormalField(String.class),
+                new FormalField(String.class)
+            );
+            if (messages.size() > lastChatCount) {
+                for (int i = lastChatCount; i < messages.size(); i++) {
+                    sender = (String) messages.get(i)[1];
+                }
+                lastChatCount = messages.size();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sender;
+    }
+ 
     private void sendChatMessage() {
         String text = chatInput.getText().trim();
         if (!text.isEmpty()) {
             try {
                 chatSpace.put("message", "you", text);
                 chatDisplay.appendText("You: " + text + "\n");
+                checkGuess(text);
                 chatInput.clear();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -243,6 +318,7 @@ public class App extends Application {
                         String text = (String) messages.get(i)[2];
                         if (!"you".equals(sender)) {
                             Platform.runLater(() -> chatDisplay.appendText("Friend: " + text + "\n"));
+                            chatDisplay.setScrollTop(Double.MAX_VALUE);
                         }
                     }
                     lastChatCount = messages.size();
