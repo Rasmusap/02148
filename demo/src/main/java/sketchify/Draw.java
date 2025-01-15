@@ -33,7 +33,7 @@ public class Draw {
         canvas.setOnMouseDragged(e -> {
             double x = e.getX();
             double y = e.getY();
-        
+
             gc.lineTo(x, y);
             gc.stroke();
             try {

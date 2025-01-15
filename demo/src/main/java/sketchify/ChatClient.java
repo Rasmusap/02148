@@ -11,7 +11,7 @@ import org.jspace.RemoteSpace;
 
 public class ChatClient {
     public static void main(String[] args) {
-        String chatURI = "tcp://192.168.0.247:8753/chat?keep";
+        String chatURI = "tcp://10.209.248.40:8753/chat?keep";
         System.out.println("[ChatClient] Attempting to connect to " + chatURI + " ...");
         final RemoteSpace chat;
         try {

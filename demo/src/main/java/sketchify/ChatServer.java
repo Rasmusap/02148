@@ -18,7 +18,7 @@ public class ChatServer {
         repository.add("chat", chatSpace);
         repository.add("draw", drawSpace);
 
-        String gateURI = "tcp://192.168.0.247:8753/?keep";
+        String gateURI = "tcp://10.209.248.40:8753/?keep";
         try {
             repository.addGate(gateURI);
             System.out.println("[Server] Successfully opened gate on " + gateURI);
@@ -43,7 +43,7 @@ public class ChatServer {
                     }
                     lastPrinted = messages.size();
 
-                    Thread.sleep(300);  // small delay
+                    Thread.sleep(300);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;

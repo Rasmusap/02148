@@ -76,8 +76,8 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        String chatURI = "tcp://192.168.0.247:8753/chat?keep";
-        String serverURI = "tcp://192.168.0.247:8753/draw?keep";
+        String chatURI = "tcp://10.209.248.40:8753/chat?keep";
+        String serverURI = "tcp://10.209.248.40:8753/draw?keep";
         try {
             chatSpace = new RemoteSpace(chatURI);
             drawSpace = new RemoteSpace(serverURI);
@@ -293,14 +293,15 @@ public class App extends Application {
         String text = chatInput.getText().trim();
         if (!text.isEmpty()) {
             try {
-                chatSpace.put("message", "you", text);
-                chatDisplay.appendText("You: " + text + "\n");
-                checkGuess(text);
-                chatInput.clear();
+                // Put a chat message in the space
+                chatSpace.put("message", text);
+                // Optionally append to our local chat immediately (or rely on the listener)
+                // chatDisplay.appendText("You: " + text + "\n");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 e.printStackTrace();
             }
+            chatInput.clear();
         }
     }
     
@@ -309,17 +310,14 @@ public class App extends Application {
             try {
                 List<Object[]> messages = chatSpace.queryAll(
                     new ActualField("message"),
-                    new FormalField(String.class),
                     new FormalField(String.class)
                 );
                 if (messages.size() > lastChatCount) {
                     for (int i = lastChatCount; i < messages.size(); i++) {
-                        String sender = (String) messages.get(i)[1];
-                        String text = (String) messages.get(i)[2];
-                        if (!"you".equals(sender)) {
-                            Platform.runLater(() -> chatDisplay.appendText("Friend: " + text + "\n"));
-                            chatDisplay.setScrollTop(Double.MAX_VALUE);
-                        }
+                        String text = (String) messages.get(i)[1];
+                        Platform.runLater(() -> {
+                            chatDisplay.appendText("Friend: " + text + "\n");
+                        });
                     }
                     lastChatCount = messages.size();
                 }
