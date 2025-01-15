@@ -18,7 +18,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -53,6 +52,7 @@ public class App extends Application {
     double x = 0;
     double y = 0;
     int seconds = 60;
+    boolean isGuessed = false;
     private int lastDrawCount = 0;
     private int lastChatCount = 0;
     
@@ -63,7 +63,12 @@ public class App extends Application {
     private TextField chatInput;
     private Label wordlabel;
     private Label guessedField;
+    private Label timerLabel;
     private Button sendBtn;
+    private Button label1;
+    private Button label2;
+    private Button label3;
+    private HBox top;
 
     private Canvas canvas;
     private GraphicsContext gc;
@@ -76,8 +81,8 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        String chatURI = "tcp://10.209.248.40:8753/chat?keep";
-        String serverURI = "tcp://10.209.248.40:8753/draw?keep";
+        String chatURI = "tcp://192.168.0.247:8753/chat?keep";
+        String serverURI = "tcp://192.168.0.247:8753/draw?keep";
         try {
             chatSpace = new RemoteSpace(chatURI);
             drawSpace = new RemoteSpace(serverURI);
@@ -91,11 +96,12 @@ public class App extends Application {
 
         BorderPane root = new BorderPane();
 
-        HBox top = new HBox();
+        
+        top = new HBox();
         top.setBackground(new Background(new BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
         top.setPrefHeight(100);
 
-        Label timerLabel = new Label();
+        timerLabel = new Label();
         timerLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: white;");
         initializeTimeline(timerLabel);
     
@@ -106,9 +112,10 @@ public class App extends Application {
         guessedField.setStyle("-fx-font-size: 16px; -fx-text-fill: white;");
 
         HBox.setHgrow(guessedField, Priority.ALWAYS);
-        Button label1 = new Button(word1);
-        Button label2 = new Button(word2);
-        Button label3 = new Button(word3);
+
+        label1 = new Button(word1);
+        label2 = new Button(word2);
+        label3 = new Button(word3);
 
         top.setPadding(new Insets(0, 182, 0, 0));
 
@@ -186,24 +193,7 @@ public class App extends Application {
             canvas.setHeight(newH.doubleValue());
         });
 
-        label1.setOnAction((e) -> {
-            wordlabel.setText(word1);
-            selectedWord = word1;
-            HBox parent = (HBox) label1.getParent();
-            parent.getChildren().removeAll(label1, label2, label3);
-        });
-        label2.setOnAction(e -> {
-            wordlabel.setText(word2);
-            selectedWord = word2;
-            HBox parent = (HBox) label1.getParent();
-            parent.getChildren().removeAll(label1, label2, label3);
-        });
-        label3.setOnAction(e -> {
-            wordlabel.setText(word3);
-            selectedWord = word3;
-            HBox parent = (HBox) label1.getParent();
-            parent.getChildren().removeAll(label1, label2, label3);
-        });
+        selectWord(word1, word2, word3);
 
         Draw draw = new Draw(x, y, actiontype);
 
@@ -238,15 +228,73 @@ public class App extends Application {
         drawListener.start();
     }
 
+    private void selectWord(String word1, String word2, String word3) {
+        label1.setOnAction((e) -> {
+            wordlabel.setText(word1);
+            selectedWord = word1;
+            HBox parent = (HBox) label1.getParent();
+            parent.getChildren().removeAll(label1, label2, label3);
+            timeline.play();
+        });
+        label2.setOnAction(e -> {
+            wordlabel.setText(word2);
+            selectedWord = word2;
+            HBox parent = (HBox) label2.getParent();
+            parent.getChildren().removeAll(label1, label2, label3);
+            timeline.play();
+        });
+        label3.setOnAction(e -> {
+            wordlabel.setText(word3);
+            selectedWord = word3;
+            HBox parent = (HBox) label3.getParent();
+            parent.getChildren().removeAll(label1, label2, label3);
+            timeline.play();
+        });
+    }
+
     private void checkGuess(String message) {
+        timeline.stop();
         if (message.trim().equalsIgnoreCase(selectedWord)) {
             guessedField.setText(getSender() + " has guessed the word right");
+            isGuessed = true;
             chatInput.setEditable(false);
             sendBtn.setDisable(true);
+            
+            Timeline delayTimeline = new Timeline(new KeyFrame(Duration.seconds(3), event -> {    
+                seconds = 61;
+                timeline.playFromStart();
+                generateNewRound();
+            }));
+            delayTimeline.setCycleCount(1);
+            delayTimeline.play();
         }
     }
 
-    public void initializeTimeline(Label timerLabel) {
+    private void generateNewRound() {
+        isGuessed = false;
+        word1 = generateRandomWord();
+        word2 = generateRandomWord();
+        word3 = generateRandomWord();
+
+        label1.setText(word1);
+        label2.setText(word2);
+        label3.setText(word3);
+
+        guessedField.setText("");
+        chatInput.setEditable(true);
+        sendBtn.setDisable(false);
+        wordlabel.setText("");
+        Platform.runLater(() -> {
+            top.getChildren().addAll(label1, label2, label3); 
+            selectWord(word1, word2, word3);
+        });
+    
+        seconds = 61;
+        timeline.playFromStart();
+        timeline.stop();
+    }
+
+    private void initializeTimeline(Label timerLabel) {
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             if (seconds > 0) {
                 seconds--;
@@ -258,7 +306,6 @@ public class App extends Application {
         }));
     
         timeline.setCycleCount(Timeline.INDEFINITE);
-        timeline.play();
     }
 
     @Override
@@ -293,10 +340,8 @@ public class App extends Application {
         String text = chatInput.getText().trim();
         if (!text.isEmpty()) {
             try {
-                // Put a chat message in the space
                 chatSpace.put("message", text);
-                // Optionally append to our local chat immediately (or rely on the listener)
-                // chatDisplay.appendText("You: " + text + "\n");
+                checkGuess(text);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 e.printStackTrace();
@@ -316,7 +361,7 @@ public class App extends Application {
                     for (int i = lastChatCount; i < messages.size(); i++) {
                         String text = (String) messages.get(i)[1];
                         Platform.runLater(() -> {
-                            chatDisplay.appendText("Friend: " + text + "\n");
+                            chatDisplay.appendText(text + "\n");
                         });
                     }
                     lastChatCount = messages.size();
