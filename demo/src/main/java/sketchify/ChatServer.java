@@ -14,9 +14,11 @@ public class ChatServer {
 
         SequentialSpace chatSpace = new SequentialSpace();
         SequentialSpace drawSpace = new SequentialSpace();
+        SequentialSpace gameSpace = new SequentialSpace();
 
         repository.add("chat", chatSpace);
         repository.add("draw", drawSpace);
+        repository.add("game", gameSpace);
 
         String gateURI = "tcp://192.168.0.247:8753/?keep";
         try {

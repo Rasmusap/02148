@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
@@ -25,9 +26,11 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -49,15 +52,18 @@ public class App extends Application {
     String word2 = generateRandomWord();
     String word3 = generateRandomWord();
     String selectedWord = "";
+    String currentDrawer = "";
     double x = 0;
     double y = 0;
     int seconds = 60;
     boolean isGuessed = false;
     private int lastDrawCount = 0;
     private int lastChatCount = 0;
+    private int lastUserCount = 0;
     
     private RemoteSpace drawSpace;
     private RemoteSpace chatSpace;
+    private RemoteSpace gameSpace;
 
     private TextArea chatDisplay;
     private TextField chatInput;
@@ -68,12 +74,16 @@ public class App extends Application {
     private Button label1;
     private Button label2;
     private Button label3;
+    private Button start;
     private HBox top;
+    private String myUsername;
+    private String chosenDrawer;
 
     private Canvas canvas;
     private GraphicsContext gc;
     private String actiontype = "";
     private Timeline timeline;
+    private ListView<String> userList; 
 
     public static void main(String[] args) {
         launch(args);
@@ -81,21 +91,43 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        TextInputDialog dialog = new TextInputDialog("");
+        dialog.setTitle("Enter Username");
+        dialog.setHeaderText("Welcome to Sketchify!");
+        dialog.setContentText("Please enter your username:");
+
+        Optional<String> result = dialog.showAndWait();
+        if (result.isEmpty() || result.get().isBlank()) {
+            System.out.println("[App] No username entered, exiting.");
+            Platform.exit();
+            return;
+        }
+        myUsername = result.get().trim();
+        System.out.println("[App] My username: " + myUsername);
+
         String chatURI = "tcp://192.168.0.247:8753/chat?keep";
         String serverURI = "tcp://192.168.0.247:8753/draw?keep";
+        String gameURI = "tcp://192.168.0.247:8753/game?keep";
         try {
             chatSpace = new RemoteSpace(chatURI);
             drawSpace = new RemoteSpace(serverURI);
+            gameSpace = new RemoteSpace(gameURI);
         } catch (IOException e) {
             e.printStackTrace();
             return;
+        }
+
+        try {
+            gameSpace.put("user", myUsername);
+            System.out.println("[App] Put (\"user\", " + myUsername + ") in gameSpace.");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
         primaryStage.setTitle("Sketchify");
         primaryStage.setMaximized(true);
 
         BorderPane root = new BorderPane();
-
         
         top = new HBox();
         top.setBackground(new Background(new BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
@@ -137,6 +169,11 @@ public class App extends Application {
         bottom.setSpacing(10);
         bottom.setAlignment(Pos.CENTER);
         HBox center = new HBox();
+        start = new Button("Start");
+        start.setOnAction(e -> {
+            startGame();
+        });
+        
         center.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
 
         VBox centerVBox = new VBox();
@@ -178,11 +215,21 @@ public class App extends Application {
 
         right.getChildren().addAll(chatBox);
 
-        canvas = new Canvas(1000, 530);
+        canvas = new Canvas(800, 530);
         gc = canvas.getGraphicsContext2D();
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(2);
 
+        VBox left = new VBox(8);
+        left.setStyle("-fx-background-color: lightblue;");
+        left.setPadding(new Insets(10));
+        left.setPrefWidth(200);
+
+        Label lobbyLabel = new Label("Lobby (Users):");
+        userList = new ListView<>();
+        userList.setPrefHeight(300);
+
+        left.getChildren().addAll(lobbyLabel, userList);
         StackPane centerPane = new StackPane();
         centerPane.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
 
@@ -198,19 +245,25 @@ public class App extends Application {
         Draw draw = new Draw(x, y, actiontype);
 
         draw.isPressed(canvas, gc, drawSpace);
-
-        draw.isDragged(canvas, gc, drawSpace);
-
+        draw.isDragged(canvas, gc, drawSpace);   
+        
         centerVBox.getChildren().addAll(wordlabel, canvas);
         center.getChildren().add(centerVBox);
-
-        top.getChildren().addAll(label1, label2, label3, guessedField, timerLabel);
 
         Button clear = new Button("Clear canvas");
         clear.setOnAction(event -> gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight()));
 
-        bottom.getChildren().addAll(clear);
+        clear.setOnAction(event -> {
+            try {
+                drawSpace.put("draw", 0.0, 0.0, "clear");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
 
+        bottom.getChildren().addAll(clear, start);
+
+        root.setLeft(left);
         root.setTop(top);
         root.setRight(right);
         root.setBottom(bottom);
@@ -226,6 +279,28 @@ public class App extends Application {
         Thread drawListener = new Thread(this::listenForDraws, "DrawListener");
         drawListener.setDaemon(true);
         drawListener.start();
+
+        Thread userListener = new Thread(this::listenForUsers, "UserListener");
+        userListener.setDaemon(true);
+        userListener.start();
+
+        Thread gameStartListener = new Thread(this::listenForGameLogic, "GameLogicListener");
+        gameStartListener.setDaemon(true);
+        gameStartListener.start();
+    }
+
+    private void startGame() {
+        try {
+            chooseRandomPlayer();
+            gameSpace.put("game", "drawer");
+            gameSpace.put("game", "start");
+            top.getChildren().addAll(label1, label2, label3, guessedField, timerLabel);
+            HBox parent = (HBox) start.getParent();
+            parent.getChildren().removeAll(start);
+            chatDisplay.appendText("[System] Drawer selected: " + chosenDrawer + "\n");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void selectWord(String word1, String word2, String word3) {
@@ -255,10 +330,11 @@ public class App extends Application {
     private void checkGuess(String message) {
         timeline.stop();
         if (message.trim().equalsIgnoreCase(selectedWord)) {
-            guessedField.setText(getSender() + " has guessed the word right");
+            guessedField.setText(myUsername + " has guessed the word right");
             isGuessed = true;
             chatInput.setEditable(false);
             sendBtn.setDisable(true);
+            chooseRandomPlayer();
             
             Timeline delayTimeline = new Timeline(new KeyFrame(Duration.seconds(3), event -> {    
                 seconds = 61;
@@ -315,26 +391,6 @@ public class App extends Application {
         }
         super.stop();
     }
-
-    private String getSender() {
-        String sender = "";
-        try {
-            List<Object[]> messages = chatSpace.queryAll(
-                new ActualField("message"),
-                new FormalField(String.class),
-                new FormalField(String.class)
-            );
-            if (messages.size() > lastChatCount) {
-                for (int i = lastChatCount; i < messages.size(); i++) {
-                    sender = (String) messages.get(i)[1];
-                }
-                lastChatCount = messages.size();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return sender;
-    }
  
     private void sendChatMessage() {
         String text = chatInput.getText().trim();
@@ -347,6 +403,37 @@ public class App extends Application {
                 e.printStackTrace();
             }
             chatInput.clear();
+        }
+    }
+
+    private void listenForGameLogic() {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                List<Object[]> gameStatus = gameSpace.queryAll(new ActualField("game"), new FormalField(String.class));
+                if (!gameStatus.isEmpty()) {
+                    String status = (String) gameStatus.get(0)[1];                
+    
+                    if ("start".equals(status)) {
+                        Platform.runLater(() -> {
+                            System.out.println("[Game] Starting the game!");
+                            startGame();
+                        }); 
+                    }
+                    if ("drawer".equals(status)) {
+                        Platform.runLater(() -> {
+                            String drawer = chosenDrawer;
+                            chatDisplay.appendText("[System] Drawer selected: " + drawer + "\n");
+                            HBox parent = (HBox) start.getParent();
+                            parent.getChildren().removeAll(start);
+                        });
+                        }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
     
@@ -393,6 +480,9 @@ public class App extends Application {
                         String action = (String) tuple[3];
 
                         Platform.runLater(() -> {
+                            if ("clear".equals(action)) {
+                                gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+                            }
                             if ("start".equals(action)) {
                                 gc.beginPath();
                                 gc.moveTo(x, y);
@@ -411,6 +501,25 @@ public class App extends Application {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void chooseRandomPlayer() {
+        try {
+            List<Object[]> allUsers = gameSpace.queryAll(
+                new ActualField("user"),
+                new FormalField(String.class)
+            );
+            if (allUsers.isEmpty()) {
+                chatDisplay.appendText("[System] No users found, cannot start.\n");
+                return;
+            }
+            int idx = new Random().nextInt(allUsers.size());
+            chosenDrawer = (String) allUsers.get(idx)[1];
+            gameSpace.put("drawer", chosenDrawer);
+            chatDisplay.appendText("[System] Drawer selected: " + chosenDrawer + "\n");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -452,4 +561,34 @@ public class App extends Application {
 
         return randomWord;
     }
+
+    private void listenForUsers() {
+        while(!Thread.currentThread().isInterrupted()){
+            try {
+                List<Object[]> users = gameSpace.queryAll(
+                    new ActualField("user"),
+                    new FormalField(String.class)
+                );
+                if(users.size() > lastUserCount){
+                    Set<String> allNames = new HashSet<>();
+                    for(Object[] arr : users){
+                        String name = (String) arr[1];
+                        allNames.add(name);
+                    }
+                    Platform.runLater(() -> {
+                        userList.getItems().setAll(allNames);
+                    });
+
+                    lastUserCount = users.size();
+                }
+                Thread.sleep(300);
+            } catch(InterruptedException e){
+                Thread.currentThread().interrupt();
+                break;
+            } catch(Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+
 }
