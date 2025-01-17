@@ -377,11 +377,10 @@ public class App extends Application {
     
                     chatDisplay.appendText("[System] Word has been guessed correctly! New round starting...\n");
     
-                    generateNewRound(); // Start new round after correct guess
+                    generateNewRound();
     
-                    // Choose new drawer after the correct guess
-                    chooseRandomPlayer();  // This will pick a new drawer
-                    gameSpace.put("game", "drawer", chosenDrawer); // Update the drawer in game state
+                    chooseRandomPlayer();  
+                    gameSpace.put("game", "drawer", chosenDrawer); 
                     chatDisplay.appendText("[System] New drawer selected: " + chosenDrawer + "\n");
                 }
             }
