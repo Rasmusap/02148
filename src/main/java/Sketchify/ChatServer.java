@@ -10,13 +10,19 @@ import org.jspace.SpaceRepository;
 
 public class ChatServer {
     public static void main(String[] args) {
+
+    }
+
+    public void startServer() {
         SpaceRepository repository = new SpaceRepository();
 
         SequentialSpace chatSpace = new SequentialSpace();
         SequentialSpace drawSpace = new SequentialSpace();
+        SequentialSpace gameSpace = new SequentialSpace();
 
         repository.add("chat", chatSpace);
         repository.add("draw", drawSpace);
+        repository.add("game", gameSpace);
 
         String gateURI = "tcp://127.0.0.1:8753/?keep";
         try {
@@ -81,7 +87,7 @@ public class ChatServer {
                         double x = (double) tuple[1];
                         double y = (double) tuple[2];
                         String action = (String) tuple[3];
-                        System.out.println("[Server-Draw] sees: (" + x + ", " + y + "), action=" + action);
+//                        System.out.println("[Server-Draw] sees: (" + x + ", " + y + "), action=" + action);
                     }
                     lastDrawLogged = draws.size();
 

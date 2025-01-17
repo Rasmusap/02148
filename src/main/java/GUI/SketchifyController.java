@@ -27,7 +27,7 @@ import java.util.*;
 public class SketchifyController implements Initializable {
 
     // ---------------------------------------
-    // FXML fields from your "sketchify-page.fxml"
+    // FXML fields from "sketchify-page.fxml"
     // ---------------------------------------
     @FXML
     private Canvas Canvas;
@@ -90,8 +90,9 @@ public class SketchifyController implements Initializable {
     // ---------------------------------------
     // Fields taken from "App"
     // ---------------------------------------
-    private RemoteSpace drawSpace;
-    private RemoteSpace chatSpace;
+    RemoteSpace drawSpace;
+    RemoteSpace chatSpace;
+    RemoteSpace gameSpace;
 
     private Set<String> generatedWords = new HashSet<>();
     private String word1;
@@ -99,8 +100,12 @@ public class SketchifyController implements Initializable {
     private String word3;
     private String selectedWord = "";
 
+    private String currentDrawer = "";
+
+    private boolean isGuessed = false;
     private int lastDrawCount = 0;
     private int lastChatCount = 0;
+    private int lastUserCount = 0;
     private int seconds = 60;  // or 120, etc.
     private Timeline timeline;
 
@@ -135,15 +140,17 @@ public class SketchifyController implements Initializable {
         PlayerList.setEditable(false);
 
         //Set up RemoteSpaces
-        String chatURI = "tcp://127.0.0.1:8753/chat?keep";
-        String serverURI = "tcp://127.0.0.1:8753/draw?keep";
-        try {
-            chatSpace = new RemoteSpace(chatURI);
-            drawSpace = new RemoteSpace(serverURI);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
+//        String chatURI = "tcp://127.0.0.1:8753/chat?keep";
+//        String serverURI = "tcp://127.0.0.1:8753/draw?keep";
+//        String gameURI = "tcp://127.0.0.1:8753/game?keep";
+//        try {
+//            chatSpace = new RemoteSpace(chatURI);
+//            drawSpace = new RemoteSpace(serverURI);
+//            gameSpace = new RemoteSpace(gameURI);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            return;
+//        }
 
 
 
@@ -374,5 +381,16 @@ public class SketchifyController implements Initializable {
             e.printStackTrace();
         }
         return randomWord;
+    }
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn) throws InterruptedException {
+        chatSpace = chatSpaceIn;
+        gameSpace = gameSpaceIn;
+        drawSpace = drawSpaceIn;
+        System.out.println("Host game chatSpace contain "
+                + chatSpace.queryAll().toString()
+                + " and gameSpace "
+                + gameSpace.queryAll(new ActualField("user"), new FormalField(String.class)).toString()
+                + " and drawSpace "
+                + drawSpace.queryAll().toString());
     }
 }

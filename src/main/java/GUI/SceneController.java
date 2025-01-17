@@ -13,20 +13,15 @@ import java.util.Objects;
 public class SceneController {
 
     public void switchToScene(ActionEvent event, String sceneTo, String cssNewScene, String title) throws IOException {
-        Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource(sceneTo)));
-
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(sceneTo));
+        Parent root = loader.load();
 
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         Scene scene = new Scene(root);
-
+        stage.setScene(scene);
         String css = this.getClass().getResource(cssNewScene).toExternalForm();
         scene.getStylesheets().add(css);
-
         stage.setTitle(title);
-
-
-        stage.setScene(scene);
-        stage.setResizable(false);
         stage.show();
     }
 
