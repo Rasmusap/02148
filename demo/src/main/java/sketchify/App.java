@@ -106,9 +106,9 @@ public class App extends Application {
         myUsername = result.get().trim();
         System.out.println("[App] My username: " + myUsername);
 
-        String chatURI = "tcp://192.168.0.247:8753/chat?keep";
-        String serverURI = "tcp://192.168.0.247:8753/draw?keep";
-        String gameURI = "tcp://192.168.0.247:8753/game?keep";
+        String chatURI = "tcp://10.100.32.49:8753/chat?keep";
+        String serverURI = "tcp://10.100.32.49:8753/draw?keep";
+        String gameURI = "tcp://10.100.32.49:8753/game?keep";
         try {
             chatSpace = new RemoteSpace(chatURI);
             drawSpace = new RemoteSpace(serverURI);
@@ -369,6 +369,7 @@ public class App extends Application {
     }
 
     private boolean isGuessCorrect = false;
+    private boolean isWordAppended = false;
     private void checkGuess(String message) {
         try {
             gameStatus = gameSpace.queryAll(
@@ -384,9 +385,9 @@ public class App extends Application {
                     isGuessCorrect = true;
                     generateNewRound();
 
-                    if (!drawerAppended) {
-                        chatDisplay.appendText("[System] Drawer selected: " + getDrawer() + "\n");
-                        drawerAppended = true;
+                    if (!isWordAppended) {
+                        chatDisplay.appendText("The word has been guessed correctly!\n");
+                        isWordAppended = true;
                     }
                     isolateDrawerAndGuesser();  
             }
@@ -398,6 +399,7 @@ public class App extends Application {
     }
 
     private void generateNewRound() {
+        isWordAppended = false;
         hasGuessedCorrectly = false;
         drawerAppended = false;
         isGuessCorrect = false;
@@ -493,7 +495,6 @@ public class App extends Application {
                         if (!hasGuessedCorrectly) {
                             checkGuess(guess);
                             Thread.sleep(10);
-                            chatDisplay.appendText("The word has been guessed correctly!\n");
                             hasGuessedCorrectly = true; 
                         }
                     }
