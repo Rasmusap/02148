@@ -36,3 +36,11 @@
     -fx-font-family: "Lucida Console";
     -fx-font-size: 25;
 }
+#nameLabel {
+    -fx-alignment: center;
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+    -fx-font-size: 25;
+
+}
