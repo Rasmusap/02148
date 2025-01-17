@@ -354,8 +354,7 @@ public class App extends Application {
         });
     }
 
-    private boolean isGuessCorrect = false;  // Flag to track whether the guess is correct
-
+    private boolean isGuessCorrect = false;
     private void checkGuess(String message) {
         try {
             gameStatus = gameSpace.queryAll(
@@ -367,28 +366,35 @@ public class App extends Application {
             if (!gameStatus.isEmpty()) {
                 String selectedWord = (String) gameStatus.get(0)[1];
     
-                // Check if the guess is correct and hasn't been handled already
                 if (message.trim().equalsIgnoreCase(selectedWord) && !isGuessCorrect) {
                     isGuessed = true;
                     chatInput.setEditable(false);
                     sendBtn.setDisable(true);
     
                     gameSpace.put("game", "timerAction", "stop");
-
-                    // Set the flag to prevent repeated messages
+    
                     isGuessCorrect = true;
+    
+                    chatDisplay.appendText("[System] Word has been guessed correctly! New round starting...\n");
+    
+                    generateNewRound(); // Start new round after correct guess
+    
+                    // Choose new drawer after the correct guess
+                    chooseRandomPlayer();  // This will pick a new drawer
+                    gameSpace.put("game", "drawer", chosenDrawer); // Update the drawer in game state
+                    chatDisplay.appendText("[System] New drawer selected: " + chosenDrawer + "\n");
                 }
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     
-        // Stop the timer when the guess is correct
         timeline.stop();
-    }    
+    }
+    
         
     private void generateNewRound() {
-        chooseRandomPlayer();
+        isGuessCorrect = false;
         isGuessed = false;
         word1 = generateRandomWord();
         word2 = generateRandomWord();
@@ -420,8 +426,6 @@ public class App extends Application {
         timeline.playFromStart();
         timeline.play();
     }
-    
-    
 
     private void initializeTimeline(Label timerLabel) {
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -459,6 +463,8 @@ public class App extends Application {
         }
     }
 
+    private boolean hasGuessedCorrectly = false;
+
     private void listenForGuesses() {
         new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
@@ -467,14 +473,18 @@ public class App extends Application {
                         new ActualField("message"),
                         new FormalField(String.class)
                     );
-    
+
                     if (!chatMessages.isEmpty()) {
                         String guess = (String) chatMessages.get(0)[1];
-                        checkGuess(guess);
-                        chatDisplay.appendText(myUsername + " has guessed the word correctly!\n");
+                        if (!hasGuessedCorrectly) {
+                            checkGuess(guess);
+                            Thread.sleep(5);
+                            chatDisplay.appendText("The word has been guessed correctly!\n");
+                            hasGuessedCorrectly = true; 
+                        }
                     }
-    
-                    Thread.sleep(500);  // Poll every 500ms for new messages
+
+                    Thread.sleep(500);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -645,7 +655,8 @@ public class App extends Application {
         String randomWord = "";
         List<String> words = new ArrayList<>();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\nicla\\OneDrive\\Dokumenter\\GitHub\\02148\\demo\\src\\words.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\n" + //
+                        "icla\\OneDrive\\Dokumenter\\GitHub\\02148\\demo\\src\\words.txt"))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] wordsLine = line.split("\\s+");
