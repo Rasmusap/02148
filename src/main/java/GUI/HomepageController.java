@@ -12,9 +12,6 @@ import javafx.stage.Stage;
 import org.jspace.*;
 
 import java.io.IOException;
-import java.util.Currency;
-import java.util.List;
-import java.util.Scanner;
 
 public class HomepageController {
     private Parent root;
@@ -36,7 +33,7 @@ public class HomepageController {
         Parent root = loader.load();
 
         HostGameController controller = loader.getController();
-        controller.setSpaces(chatSpace, gameSpace, drawSpace);
+        controller.setSpaces(chatSpace, gameSpace, drawSpace, currentUserName);
 
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         Scene scene = new Scene(root);
@@ -70,7 +67,9 @@ public class HomepageController {
         }
     }
 
-    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn) {
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String myUsername) throws InterruptedException {
+        currentUserName = myUsername;
+        System.out.println(currentUserName);
         chatSpace = chatSpaceIn;
         gameSpace = gameSpaceIn;
         drawSpace = drawSpaceIn;

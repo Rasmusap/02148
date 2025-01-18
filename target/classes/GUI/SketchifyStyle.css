@@ -79,4 +79,43 @@
 .text-area {
     -fx-font-size: 18px;
 }
+#clearCanvas {
+    -fx-background-color: grey;
+    -fx-opacity: 100;
+    -fx-background-radius: 50px;
+    -fx-font-size: 25;
+}
+#clearCanvas:hover {
+    -fx-background-color: white;
+}
+#CurrentWord2 {
+    -fx-text-alignment: center;
+    -fx-font-size: 25;
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+}
+#yellowButton:hover {
+    -fx-background-color: black;
+}
+#redButton:hover {
+    -fx-background-color: black;
+}
+#brownButton:hover {
+    -fx-background-color: black;
+}
+#blackButton:hover {
+    -fx-background-color: black;
+}
+#greenButton:hover {
+    -fx-background-color: black;
+}
+#turquoiseButton:hover {
+    -fx-background-color: black;
+}
+#pinkButton:hover {
+    -fx-background-color: black;
+}
+
+
 

@@ -1,12 +1,12 @@
 package GUI;
 
+import Sketchify.Draw;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
@@ -48,8 +48,7 @@ public class SketchifyController implements Initializable {
     @FXML
     private TextArea Chat;
     @FXML
-    private Button blackButton, blueButton, brownButton, greenButton,
-            pinkButton, redButton, turquoiseButton, yellowButton;
+    private Text CurrentWord2;
 
     // Reference to the remote spaces
     RemoteSpace drawSpace;
@@ -62,6 +61,8 @@ public class SketchifyController implements Initializable {
     private int lastChatCount = 0;
     private int lastUserCount = 0;
     private int seconds = 60;  // or 120, etc.
+
+    private int points = 0;
     private Timeline timeline;
 
     private String word1, word2, word3;
@@ -81,6 +82,8 @@ public class SketchifyController implements Initializable {
     private String chosenDrawer;
     private String lastDrawer = null;
     private boolean hasGuessedCorrectly = false;
+    private boolean isDrawer = false;
+
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -99,22 +102,35 @@ public class SketchifyController implements Initializable {
 
         // Display the initial word in the UI if needed
         CurrentWord.setText(selectedWord);
+        CurrentWord.setVisible(false);
+        updateHiddenWord();
 
         // Chat & PlayerList read-only
         Chat.setEditable(false);
         PlayerList.setEditable(false);
     }
 
+    private void updateHiddenWord() {
+        CurrentWord2.setText("_".repeat(CurrentWord.getText().length()));
+        CurrentWord2.setVisible(false);
+    }
+
+
     /**
      * Called by HostGameController or from another controller after it
      * obtains the RemoteSpaces. We inject them here, then start threads.
      */
-    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn) throws InterruptedException {
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn,
+                          String currentUsername) throws InterruptedException {
+        myUsername = currentUsername;
+        System.out.println(myUsername);
         this.chatSpace = chatSpaceIn;
         this.gameSpace = gameSpaceIn;
         this.drawSpace = drawSpaceIn;
 
-        setUpDrawingEvents();
+        if (isDrawer) {
+            setUpDrawingEvents();
+        }
 
         // Initialize the timeline or start the timer logic if needed
         initializeTimeline();
@@ -300,7 +316,6 @@ public class SketchifyController implements Initializable {
             });
         }
         if (guessedCorrectly) {
-            Chat.appendText("You guessed the word correctly!\n");
             generateNewRound();
         }
     }
@@ -401,9 +416,27 @@ public class SketchifyController implements Initializable {
                 gameSpace.put("game", "drawer", chosenDrawer);
                 gameSpace.put("game", "start");
                 gameSpace.put("game", "timerAction", "start");
+                if (!drawerAppended) {
+                    Chat.appendText("Drawer selected " + getDrawer() + "\n");
+                    drawerAppended = true;
+                }
+                isolateDrawerAndGuesser();
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void isolateDrawerAndGuesser() {
+        String actualDrawer = getDrawer();  // e.g. read from gameSpace
+        if (myUsername.equalsIgnoreCase(actualDrawer)) {
+            isDrawer = true;
+            CurrentWord.setVisible(true);
+            enableCanvasDrawing();
+        } else {
+            isDrawer = false;
+            CurrentWord.setVisible(false);
+            disableCanvasDrawing();
         }
     }
 
@@ -444,15 +477,12 @@ public class SketchifyController implements Initializable {
 
     private void generateNewRound() {
         // Example method if the timer runs out or guess is correct
+        gc.setStroke(Color.BLACK);
         isWordAppended = false;
         hasGuessedCorrectly = false;
         drawerAppended = false;
         isGuessCorrect = false;
         isGuessed = false;
-        word1 = generateRandomWord();
-        word2 = generateRandomWord();
-        word3 = generateRandomWord();
-        CurrentWord.setText(word1);
 
         try {
             chooseRandomPlayer();
@@ -463,10 +493,16 @@ public class SketchifyController implements Initializable {
         }
 
         gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
+        // Set word to a new generated word.
+        CurrentWord.setText(generateRandomWord());
+        updatePlayerList();
 
         seconds = 61;
         timeline.playFromStart();
         timeline.play();
+        
+        isolateDrawerAndGuesser();
+        updateHiddenWord();
     }
 
     // ============ Utility: random word generation ============
@@ -521,7 +557,7 @@ public class SketchifyController implements Initializable {
             StringBuilder sb = new StringBuilder();
             for (Object[] arr : users) {
                 String name = (String) arr[1];
-                sb.append(name).append("\n");
+                sb.append(name).append(": ").append(points).append("\n");
             }
             // Update the UI
             Platform.runLater(() -> {
@@ -560,5 +596,72 @@ public class SketchifyController implements Initializable {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void enableCanvasDrawing() {
+        Canvas.setOnMousePressed(event -> {
+            double px = event.getX();
+            double py = event.getY();
+            try {
+                drawSpace.put("draw", px, py, "start");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                e.printStackTrace();
+            }
+        });
+
+        Canvas.setOnMouseDragged(event -> {
+            double px = event.getX();
+            double py = event.getY();
+            try {
+                drawSpace.put("draw", px, py, "draw");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void disableCanvasDrawing() {
+        Canvas.setOnMousePressed(null);
+        Canvas.setOnMouseDragged(null);
+    }
+
+    @FXML
+    public void setClearCanvas(ActionEvent event) {
+        if (isDrawer) {
+            // Only the drawer can broadcast a clear
+            try {
+                drawSpace.put("draw", 0.0, 0.0, "clear");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    public void setStrokeBlue(ActionEvent event) {
+        gc.setStroke(Color.BLUE);
+    }
+    public void setStrokeBlack(ActionEvent event) {
+        gc.setStroke(Color.BLACK);
+    }
+    public void setStrokeBrown(ActionEvent event) {
+        gc.setStroke(Color.BROWN);
+    }
+    public void setStrokeGreen(ActionEvent event) {
+        gc.setStroke(Color.GREEN);
+    }
+    public void setStrokeRed(ActionEvent event) {
+        gc.setStroke(Color.RED);
+    }
+    public void setStrokeYellow(ActionEvent event) {
+        gc.setStroke(Color.YELLOW);
+    }
+    public void setStrokePink(ActionEvent event) {
+        gc.setStroke(Color.PINK);
+    }
+    public void setStrokeTurquoise(ActionEvent event) {
+        gc.setStroke(Color.TURQUOISE);
     }
 }

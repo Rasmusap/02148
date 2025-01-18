@@ -40,9 +40,10 @@ public class LoginController {
     private Parent root;
     private Stage stage;
     private Scene scene;
+    private String myUsername;
 
-    public void enterGame(ActionEvent event) throws IOException {
-        String myUsername = userNameTF.getText();
+    public void enterGame(ActionEvent event) throws IOException, InterruptedException {
+        myUsername = userNameTF.getText();
         if (myUsername.isEmpty()) {
             enterUsernamePrompt.setText("No username entered! please enter username");
             enterUsernamePrompt.setAlignment(Pos.CENTER);
@@ -74,7 +75,7 @@ public class LoginController {
             e.printStackTrace();
         }
         homepageController.displayName(gameSpace);
-        homepageController.setSpaces(chatSpace, gameSpace, drawSpace);
+        homepageController.setSpaces(chatSpace, gameSpace, drawSpace, myUsername);
 
         stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
         scene = new Scene(root);

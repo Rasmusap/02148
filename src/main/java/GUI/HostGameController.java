@@ -18,6 +18,7 @@ import org.jspace.*;
 import java.io.IOException;
 
 public class HostGameController {
+    private String currentUser;
     private List<Object[]> userList;
     RemoteSpace chatSpace;
     RemoteSpace drawSpace;
@@ -40,7 +41,7 @@ public class HostGameController {
         root = loader.load();
         try {
             SketchifyController sketchifyController = loader.getController();
-            sketchifyController.setSpaces(chatSpace, gameSpace, drawSpace);
+            sketchifyController.setSpaces(chatSpace, gameSpace, drawSpace, currentUser);
         } catch (RuntimeException e) {
             e.printStackTrace();
         }
@@ -59,7 +60,10 @@ public class HostGameController {
         controller.switchToScene(e, fxml, css, title);
     }
 
-    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn) throws InterruptedException {
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String myUsername)
+            throws InterruptedException {
+        currentUser = myUsername;
+        System.out.println(currentUser);
         chatSpace = chatSpaceIn;
         gameSpace = gameSpaceIn;
         drawSpace = drawSpaceIn;
