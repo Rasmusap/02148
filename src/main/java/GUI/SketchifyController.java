@@ -6,11 +6,10 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -18,6 +17,7 @@ import javafx.util.Duration;
 import org.jspace.ActualField;
 import org.jspace.FormalField;
 import org.jspace.RemoteSpace;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -26,158 +26,152 @@ import java.util.*;
 
 public class SketchifyController implements Initializable {
 
-    // ---------------------------------------
     // FXML fields from "sketchify-page.fxml"
-    // ---------------------------------------
     @FXML
     private Canvas Canvas;
-
-    @FXML
-    private AnchorPane CanvasBackground;
-
-    @FXML
-    private TextArea PlayerList;  // or use for guessed words, etc.
-
-    @FXML
-    private Text PlayerListTitle;
-
     @FXML
     private AnchorPane SceneMain;
-
     @FXML
-    private Text Timer;
-
+    private TextArea PlayerList;
     @FXML
-    private Text Title;
-
+    private Text PlayerListTitle;
     @FXML
     private AnchorPane Tools;
-
-    @FXML
-    private Button blackButton;
-
-    @FXML
-    private Button blueButton;
-
-    @FXML
-    private Button brownButton;
-
-    @FXML
-    private Button greenButton;
-
-    @FXML
-    private Button pinkButton;
-
-    @FXML
-    private Button redButton;
-
-    @FXML
-    private Button turquoiseButton;
-
-    @FXML
-    private Button yellowButton;
-
     @FXML
     private TextField guessTextField;
-
+    @FXML
+    private Text Title;
+    @FXML
+    private Text CurrentWord;
+    @FXML
+    private Text Timer;
     @FXML
     private TextArea Chat;
 
+    // Color Buttons (if you want to implement color changes)
     @FXML
-    private Text CurrentWord;
+    private Button blackButton, blueButton, brownButton, greenButton,
+            pinkButton, redButton, turquoiseButton, yellowButton;
 
-
-    // ---------------------------------------
-    // Fields taken from "App"
-    // ---------------------------------------
+    // Reference to the remote spaces
     RemoteSpace drawSpace;
     RemoteSpace chatSpace;
     RemoteSpace gameSpace;
 
+    // Game-related fields (merged from your old "App" class)
+    private GraphicsContext gc;
     private Set<String> generatedWords = new HashSet<>();
-    private String word1;
-    private String word2;
-    private String word3;
-    private String selectedWord = "";
-
-    private String currentDrawer = "";
-
-    private boolean isGuessed = false;
+    private List<Object[]> userList;
     private int lastDrawCount = 0;
     private int lastChatCount = 0;
     private int lastUserCount = 0;
     private int seconds = 60;  // or 120, etc.
     private Timeline timeline;
 
-    private GraphicsContext gc;
-    private double x = 0;
-    private double y = 0;
-    private String actiontype = "";
-    private List<Object[]> userList;
-
-
-    // Optional: track if the user guessed
+    private String word1, word2, word3;
+    private String selectedWord = "";
     private boolean guessedCorrectly = false;
+    private boolean isGuessed = false;
+    private boolean isWordAppended = false;
+    private boolean isGuessCorrect = false;
+    private boolean drawerAppended = false;
+    private int lastUserIndex = 0;
 
-    // ---------------------------------------
-    // Called automatically after FXML is loaded
-    // ---------------------------------------
+    private String actiontype = "";
+    private double x = 0, y = 0;
+
+    // If you want to track the current user name in here,
+    // you could pass it in via setSpaces(...) or a separate method.
+    // For now, we assume multiple users read from gameSpace.
+    private String myUsername = "UnknownUser";
+
+    private String chosenDrawer;
+    private String lastDrawer = null;
+    private boolean hasGuessedCorrectly = false;
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        //Initialize random word.
-        word1 = generateRandomWord();
-        selectedWord = word1;
+        // The FXML is loaded, but we do NOT have remote spaces yet.
+        // We'll fully set up in setSpaces(...) after we get them.
 
-        CurrentWord.setText(word1);
-
-        //Chat & player list areas not editable by user
-        Chat.setEditable(false);
-        PlayerList.setEditable(false);
-
-        //Set up RemoteSpaces
-//        String chatURI = "tcp://127.0.0.1:8753/chat?keep";
-//        String serverURI = "tcp://127.0.0.1:8753/draw?keep";
-//        String gameURI = "tcp://127.0.0.1:8753/game?keep";
-//        try {
-//            chatSpace = new RemoteSpace(chatURI);
-//            drawSpace = new RemoteSpace(serverURI);
-//            gameSpace = new RemoteSpace(gameURI);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            return;
-
-
-//        }
-
-
-
-        //Canvas and GraphicsContext
+        // Basic Canvas Setup
         gc = Canvas.getGraphicsContext2D();
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(2);
 
-        // Or handle mouse events here directly:
+        // The random word lines from old "App"
+        word1 = generateRandomWord();
+        word2 = generateRandomWord();
+        word3 = generateRandomWord();
+        selectedWord = word1;
+
+        // Display the initial word in the UI if needed
+        CurrentWord.setText(selectedWord);
+
+        // Chat & PlayerList read-only
+        Chat.setEditable(false);
+        PlayerList.setEditable(false);
+
+        // You can set up local event handlers for drawing, but if we don't
+        // have drawSpace yet, it will throw a NullPointerException.
+        // We'll finalize in setSpaces(...) so we have all references.
+    }
+
+    /**
+     * Called by HostGameController or from another controller after it
+     * obtains the RemoteSpaces. We inject them here, then start threads.
+     */
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn) throws InterruptedException {
+        this.chatSpace = chatSpaceIn;
+        this.gameSpace = gameSpaceIn;
+        this.drawSpace = drawSpaceIn;
+
         setUpDrawingEvents();
-        initializeTimeline(); // same logic as before
+
+        // Initialize the timeline or start the timer logic if needed
+        initializeTimeline();
+
+        // Start background threads for chat, draws, user-list, etc.
+        startThreads();
+
+        // Optional: Show an updated list of users in "PlayerList"
+        updatePlayerList();
     }
 
     private void startThreads() {
-        Thread chatListener = new Thread(this::listenForChatMessages, "ChatListener");
-        chatListener.setDaemon(true);
-        chatListener.start();
+        // Chat messages
+        Thread chatListenerThread = new Thread(this::listenForChatMessages, "ChatListener");
+        chatListenerThread.setDaemon(true);
+        chatListenerThread.start();
 
-        Thread drawListener = new Thread(this::listenForDraws, "DrawListener");
-        drawListener.setDaemon(true);
-        drawListener.start();
+        // Drawing
+        Thread drawListenerThread = new Thread(this::listenForDraws, "DrawListener");
+        drawListenerThread.setDaemon(true);
+        drawListenerThread.start();
 
-//        Thread userListener = new Thread(this::listenForUsers, "UserListener");
-//        userListener.setDaemon(true);
-//        userListener.start();
+        // If you want user changes
+        Thread userListenerThread = new Thread(this::listenForUsers, "UserListener");
+        userListenerThread.setDaemon(true);
+        userListenerThread.start();
+
+        // If you have game logic threads
+        Thread gameLogicListener = new Thread(this::listenForGameLogic, "GameLogicListener");
+        gameLogicListener.setDaemon(true);
+        gameLogicListener.start();
+
+        Thread timerListener = new Thread(this::listenForTimerAction, "TimerActionListener");
+        timerListener.setDaemon(true);
+        timerListener.start();
+
+        Thread guessListener = new Thread(this::listenForGuesses, "GuessListener");
+        guessListener.setDaemon(true);
+        guessListener.start();
     }
 
-    // Example of capturing mouse events directly
+    /**
+     * Sets up local mouse event handlers to post "draw" to the drawSpace
+     */
     private void setUpDrawingEvents() {
-        // Mouse pressed
         Canvas.setOnMousePressed(event -> {
             double px = event.getX();
             double py = event.getY();
@@ -189,7 +183,6 @@ public class SketchifyController implements Initializable {
             }
         });
 
-        // Mouse dragged
         Canvas.setOnMouseDragged(event -> {
             double px = event.getX();
             double py = event.getY();
@@ -202,7 +195,9 @@ public class SketchifyController implements Initializable {
         });
     }
 
-    // Timer logic
+    /**
+     * Timer logic (countdown)
+     */
     public void initializeTimeline() {
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             if (seconds > 0) {
@@ -211,38 +206,33 @@ public class SketchifyController implements Initializable {
             } else {
                 Timer.setText("Time's up!");
                 timeline.stop();
+                generateNewRound();  // or do whatever happens at timeout
             }
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
     }
 
-    // ---------------------------------------
-    // Chat & Draw Listeners
-    // ---------------------------------------
+    // ============ Chat & Draw Listeners ============
+
     private void listenForChatMessages() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 List<Object[]> messages = chatSpace.queryAll(
                         new ActualField("message"),
-                        new FormalField(String.class),
                         new FormalField(String.class)
                 );
                 if (messages.size() > lastChatCount) {
                     for (int i = lastChatCount; i < messages.size(); i++) {
-                        String sender = (String) messages.get(i)[1];
-                        String text = (String) messages.get(i)[2];
-                        if (!"you".equals(sender)) {
-                            // Update UI on FX thread
-                            Platform.runLater(() -> {
-                                Chat.appendText("Friend: " + text + "\n");
-                                Chat.setScrollTop(Double.MAX_VALUE);
-                            });
-                        }
+                        String text = (String) messages.get(i)[1];
+                        Platform.runLater(() -> {
+                            Chat.appendText(text + "\n");
+                        });
                     }
                     lastChatCount = messages.size();
                 }
                 Thread.sleep(300);
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -268,7 +258,9 @@ public class SketchifyController implements Initializable {
                         String action = (String) draws.get(i)[3];
 
                         Platform.runLater(() -> {
-                            if ("start".equals(action)) {
+                            if ("clear".equals(action)) {
+                                gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
+                            } else if ("start".equals(action)) {
                                 gc.beginPath();
                                 gc.moveTo(dx, dy);
                                 gc.stroke();
@@ -280,35 +272,28 @@ public class SketchifyController implements Initializable {
                     }
                     lastDrawCount = draws.size();
                 }
-//                Thread.sleep(300);
-//            } catch (InterruptedException e) {
-//                Thread.currentThread().interrupt();
-//                break;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
-    // ---------------------------------------
-    // Example "Send chat message" method
-    // (In FXML, you could wire a button to call this)
-    // ---------------------------------------
+    // ============ Button: Send Chat / Guess ============
 
     @FXML
     public void sendGuess(ActionEvent event) {
         String guess = guessTextField.getText().trim();
         if (!guess.isEmpty()) {
             try {
-                // Put message into chatSpace with the format you use
-                chatSpace.put("message", "you", guess);
-
-                // Append to local chat display
+                chatSpace.put("message", "you: " + guess);
+                // Also display locally
                 Chat.appendText("You: " + guess + "\n");
-
-                // Clear the text field
                 guessTextField.clear();
                 checkGuess(guess);
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 e.printStackTrace();
@@ -316,49 +301,200 @@ public class SketchifyController implements Initializable {
         }
     }
 
-
-    // Checking guess logic from "App"
+    /**
+     * Checking guess logic
+     */
     private void checkGuess(String message) {
-        if (message.trim().equalsIgnoreCase(selectedWord)) {
-            // Maybe show in the PlayerList area or console
+        if (message.trim().equalsIgnoreCase(selectedWord) && !guessedCorrectly) {
+            guessedCorrectly = true;
             Platform.runLater(() -> {
                 Chat.appendText("You guessed the word correctly!\n");
             });
-            guessedCorrectly = true;
+        }
+        if (guessedCorrectly) {
+            Chat.appendText("You guessed the word correctly!\n");
+            generateNewRound();
         }
     }
 
-    // ---------------------------------------
-    // Clean up on stop
-    // ---------------------------------------
-//    public void stopThreads() {
-//        if (chatListener != null) {
-//            chatListener.interrupt();
-//        }
-//        if (drawListener != null) {
-//            drawListener.interrupt();
-//        }
-//        if (timeline != null) {
-//            timeline.stop();
-//        }
-//    }
+    // ============ Other threads for game logic ============
 
-    // ---------------------------------------
-    // Generate random words
-    // ---------------------------------------
+    private void listenForGuesses() {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                List<Object[]> chatMessages = chatSpace.queryAll(
+                        new ActualField("message"),
+                        new FormalField(String.class)
+                );
+                if (!chatMessages.isEmpty()) {
+                    String guess = (String) chatMessages.get(0)[1];
+                    // If the guess hasn't been marked correct yet, check it
+                    if (!hasGuessedCorrectly) {
+                        checkGuess(guess);
+                        Thread.sleep(10);
+                        hasGuessedCorrectly = true;
+                    }
+                }
+                Thread.sleep(500);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+    }
+
+    private void listenForTimerAction() {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                List<Object[]> gameStatus = gameSpace.queryAll(
+                        new ActualField("game"),
+                        new ActualField("timerAction"),
+                        new FormalField(String.class)
+                );
+                if (!gameStatus.isEmpty()) {
+                    String timerAction = (String) gameStatus.get(0)[1];
+                    if ("stop".equals(timerAction)) {
+                        timeline.stop();
+                        seconds = 61;
+                    }
+                }
+                Thread.sleep(300);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+    }
+
+    private void listenForGameLogic() {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                List<Object[]> statuses = gameSpace.queryAll(
+                        new ActualField("game"),
+                        new FormalField(String.class)
+                );
+                if (!statuses.isEmpty()) {
+                    // e.g. ("game", "start"), ("game", "drawer"), etc.
+                    String status = (String) statuses.get(0)[1];
+
+                    if ("start".equals(status)) {
+                        Platform.runLater(this::startGame);
+                    }
+                    if ("drawer".equals(status)) {
+                        String newDrawer = getDrawer();
+                        if (lastDrawer == null || !newDrawer.equals(lastDrawer)) {
+                            lastDrawer = newDrawer;
+                            Platform.runLater(() -> {
+                                Chat.appendText("[System] Drawer selected: " + newDrawer + "\n");
+                            });
+                        }
+                    }
+                }
+                Thread.sleep(500);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // ============ Round Flow Methods ============
+
+    private void startGame() {
+        // Example of setting up a new round or choosing a drawer
+        try {
+            if (lastDrawer == null) {
+                chooseRandomPlayer();
+                gameSpace.put("game", "drawer", chosenDrawer);
+                gameSpace.put("game", "start");
+                gameSpace.put("game", "timerAction", "start");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void chooseRandomPlayer() {
+        try {
+            List<Object[]> allUsers = gameSpace.queryAll(
+                    new ActualField("user"),
+                    new FormalField(String.class)
+            );
+            if (allUsers.isEmpty()) {
+                Platform.runLater(() -> Chat.appendText("[System] No users found, cannot start.\n"));
+                return;
+            }
+            int idx = new Random().nextInt(allUsers.size());
+            chosenDrawer = (String) allUsers.get(idx)[1];
+            gameSpace.put("game", "drawer", chosenDrawer);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+        }
+    }
+
+    private String getDrawer() {
+        try {
+            Object[] drawerEntry = gameSpace.query(
+                    new ActualField("game"),
+                    new ActualField("drawer"),
+                    new FormalField(String.class)
+            );
+            return (String) drawerEntry[2];
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private void generateNewRound() {
+        // Example method if the timer runs out or guess is correct
+        isWordAppended = false;
+        hasGuessedCorrectly = false;
+        drawerAppended = false;
+        isGuessCorrect = false;
+        isGuessed = false;
+        word1 = generateRandomWord();
+        word2 = generateRandomWord();
+        word3 = generateRandomWord();
+        CurrentWord.setText(word1);
+
+        try {
+            chooseRandomPlayer();
+            gameSpace.put("game", "drawer", chosenDrawer);
+            gameSpace.put("game", "timerAction", "start");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
+
+        seconds = 61;
+        timeline.playFromStart();
+        timeline.play();
+    }
+
+    // ============ Utility: random word generation ============
+
     public String generateRandomWord() {
         String randomWord = "";
         List<String> words = new ArrayList<>();
 
-        try (BufferedReader reader = new BufferedReader(
-                new FileReader("src/main/resources/Sketchify/words.txt")
-        )) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(
+                "src/main/resources/Sketchify/words.txt"
+        ))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] wordsLine = line.split("\\s+");
                 words.addAll(Arrays.asList(wordsLine));
             }
-
             if (words.isEmpty()) {
                 throw new IllegalStateException("No words found in the file.");
             }
@@ -385,42 +521,56 @@ public class SketchifyController implements Initializable {
         }
         return randomWord;
     }
-    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn) throws InterruptedException {
-        this.chatSpace = chatSpaceIn;
-        this.gameSpace = gameSpaceIn;
-        this.drawSpace = drawSpaceIn;
-        startThreads();
-        updatePlayerList();
-//        System.out.println("Host game chatSpace contain "
-//                + chatSpace.queryAll().toString()
-//                + " and gameSpace "
-//                + gameSpace.queryAll(new ActualField("user"), new FormalField(String.class)).toString()
-//                + " and drawSpace "
-//                + drawSpace.queryAll().toString());
-    }
+
+    // ============ Show the user list in PlayerList TextArea ============
 
     private void updatePlayerList() {
         try {
-            // Query all tuples of the form ("user", <String>)
-            userList = gameSpace.queryAll(
+            List<Object[]> users = gameSpace.queryAll(
                     new ActualField("user"),
                     new FormalField(String.class)
             );
-
-            // Build a display string
             StringBuilder sb = new StringBuilder();
-            for (Object[] userTuple : userList) {
-                String username = (String) userTuple[1];
-                sb.append(username).append("\n");
+            for (Object[] arr : users) {
+                String name = (String) arr[1];
+                sb.append(name).append("\n");
             }
-
-            // Show them in the lobbyTextArea
-            PlayerList.setText(sb.toString());
-            PlayerList.setEditable(false);
-
+            // Update the UI
+            Platform.runLater(() -> {
+                PlayerList.setText(sb.toString());
+            });
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             e.printStackTrace();
+        }
+    }
+
+    private void listenForUsers() {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                List<Object[]> users = gameSpace.queryAll(
+                        new ActualField("user"),
+                        new FormalField(String.class)
+                );
+                if (users.size() > lastUserCount) {
+                    Set<String> allNames = new HashSet<>();
+                    for (Object[] arr : users) {
+                        String name = (String) arr[1];
+                        allNames.add(name);
+                    }
+                    Platform.runLater(() -> {
+                        PlayerList.setText(String.join("\n", allNames));
+                    });
+                    lastUserCount = users.size();
+                }
+                Thread.sleep(300);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }

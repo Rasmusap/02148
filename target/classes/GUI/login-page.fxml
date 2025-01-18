@@ -8,7 +8,7 @@
 
 <AnchorPane prefHeight="400.0" prefWidth="600.0" stylesheets="@LoginStyle.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.LoginController">
    <children>
-      <Label fx:id="enterUsernamePrompt" layoutX="162.0" layoutY="115.0" text="Please enter your username" />
+      <Label fx:id="enterUsernamePrompt" alignment="CENTER" layoutX="2.0" layoutY="115.0" prefHeight="20.0" prefWidth="600.0" text="Please enter your username" />
       <TextField fx:id="userNameTF" layoutX="195.0" layoutY="150.0" promptText="Username" />
       <Button fx:id="enterGameButton" layoutX="208.0" layoutY="207.0" mnemonicParsing="false" onAction="#enterGame" text="Enter Game" />
       <Text fx:id="Title" layoutX="151.0" layoutY="80.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Welcome to Sketchify" />

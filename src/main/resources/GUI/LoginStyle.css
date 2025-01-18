@@ -38,3 +38,7 @@
     -fx-text-fill: blue;
     -fx-background-color: red;
 }
+
+#enterUsernamePrompt {
+    -fx-text-alignment: center;
+}

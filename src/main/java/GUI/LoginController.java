@@ -4,6 +4,7 @@ import Sketchify.ChatServer;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -42,6 +43,11 @@ public class LoginController {
 
     public void enterGame(ActionEvent event) throws IOException {
         String myUsername = userNameTF.getText();
+        if (myUsername.isEmpty()) {
+            enterUsernamePrompt.setText("No username entered! please enter username");
+            enterUsernamePrompt.setAlignment(Pos.CENTER);
+            return; // Stop here so the user can try again
+        }
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("home-page.fxml"));
         root = loader.load();
@@ -50,9 +56,9 @@ public class LoginController {
 
 
         //Parent root loaded from FXML file
-        String chatURI = "tcp://127.0.0.1:8753/chat?keep";
-        String serverURI = "tcp://127.0.0.1:8753/draw?keep";
-        String gameURI = "tcp://127.0.0.1:8753/game?keep";
+        String chatURI = "tcp://192.168.8.69:8753/chat?keep";
+        String serverURI = "tcp://192.168.8.69:8753/draw?keep";
+        String gameURI = "tcp://192.168.8.69:8753/game?keep";
         try {
             chatSpace = new RemoteSpace(chatURI);
             drawSpace = new RemoteSpace(serverURI);
