@@ -47,8 +47,6 @@ public class SketchifyController implements Initializable {
     private Text Timer;
     @FXML
     private TextArea Chat;
-
-    // Color Buttons (if you want to implement color changes)
     @FXML
     private Button blackButton, blueButton, brownButton, greenButton,
             pinkButton, redButton, turquoiseButton, yellowButton;
@@ -57,8 +55,6 @@ public class SketchifyController implements Initializable {
     RemoteSpace drawSpace;
     RemoteSpace chatSpace;
     RemoteSpace gameSpace;
-
-    // Game-related fields (merged from your old "App" class)
     private GraphicsContext gc;
     private Set<String> generatedWords = new HashSet<>();
     private List<Object[]> userList;
@@ -80,9 +76,6 @@ public class SketchifyController implements Initializable {
     private String actiontype = "";
     private double x = 0, y = 0;
 
-    // If you want to track the current user name in here,
-    // you could pass it in via setSpaces(...) or a separate method.
-    // For now, we assume multiple users read from gameSpace.
     private String myUsername = "UnknownUser";
 
     private String chosenDrawer;
@@ -92,7 +85,6 @@ public class SketchifyController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         // The FXML is loaded, but we do NOT have remote spaces yet.
-        // We'll fully set up in setSpaces(...) after we get them.
 
         // Basic Canvas Setup
         gc = Canvas.getGraphicsContext2D();
@@ -111,10 +103,6 @@ public class SketchifyController implements Initializable {
         // Chat & PlayerList read-only
         Chat.setEditable(false);
         PlayerList.setEditable(false);
-
-        // You can set up local event handlers for drawing, but if we don't
-        // have drawSpace yet, it will throw a NullPointerException.
-        // We'll finalize in setSpaces(...) so we have all references.
     }
 
     /**
