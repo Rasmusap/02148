@@ -424,14 +424,19 @@ public class SketchifyController implements Initializable {
     }
 
     private void isolateDrawerAndGuesser() {
+        syncCurrentWordFromSpace();
+
         String actualDrawer = getDrawer();  // e.g. read from gameSpace
         if (myUsername.equalsIgnoreCase(actualDrawer)) {
             isDrawer = true;
+            CurrentWord.setText(selectedWord);
             CurrentWord.setVisible(true);
             enableCanvasDrawing();
         } else {
             isDrawer = false;
             CurrentWord.setVisible(false);
+            updateHiddenWord();
+            CurrentWord2.setVisible(true);
             disableCanvasDrawing();
         }
     }
@@ -479,16 +484,21 @@ public class SketchifyController implements Initializable {
         drawerAppended = false;
         isGuessCorrect = false;
         isGuessed = false;
+        gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
 
         try {
             chooseRandomPlayer();
+
+            String newWord = generateRandomWord();
+            gameSpace.put("game", "selectedWord", newWord);
+
             gameSpace.put("game", "drawer", chosenDrawer);
             gameSpace.put("game", "timerAction", "start");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-        gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
+
         // Set word to a new generated word.
         CurrentWord.setText(generateRandomWord());
         updatePlayerList();
@@ -500,6 +510,20 @@ public class SketchifyController implements Initializable {
         isolateDrawerAndGuesser();
         lastDrawer = null;
         updateHiddenWord();
+    }
+
+    private void syncCurrentWordFromSpace() {
+        try {
+            Object[] result = gameSpace.query(
+                    new ActualField("game"),
+                    new ActualField("selectedWord"),
+                    new FormalField(String.class)
+            );
+            this.selectedWord = (String) result[2];
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+        }
     }
 
     // ============ Utility: random word generation ============
