@@ -7,6 +7,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import org.jspace.*;
 import java.io.IOException;
 
 public class HostGameController {
+    private List<Object[]> userList;
     RemoteSpace chatSpace;
     RemoteSpace drawSpace;
     RemoteSpace gameSpace;
@@ -25,7 +27,10 @@ public class HostGameController {
     private Stage stage;
     private Scene scene;
     @FXML
+    private TextArea lobbyTextArea;
+    @FXML
     private Button StartGameButton;
+
     public void InvitePlayers(ActionEvent e) {
         System.out.println("Inviting Players...");
     }
@@ -40,7 +45,7 @@ public class HostGameController {
             e.printStackTrace();
         }
 
-        stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
+        stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         scene = new Scene(root);
         stage.setScene(scene);
         stage.show();
@@ -64,5 +69,32 @@ public class HostGameController {
                 + gameSpace.queryAll(new ActualField("user"), new FormalField(String.class)).toString()
                 + " and drawSpace "
                 + drawSpace.queryAll().toString());
+
+        updateLobbyList();
+    }
+
+    public void updateLobbyList() {
+        try {
+            // Query all tuples of the form ("user", <String>)
+            userList = gameSpace.queryAll(
+                    new ActualField("user"),
+                    new FormalField(String.class)
+            );
+
+            // Build a display string
+            StringBuilder sb = new StringBuilder();
+            for (Object[] userTuple : userList) {
+                String username = (String) userTuple[1];
+                sb.append(username).append("\n");
+            }
+
+            // Show them in the lobbyTextArea
+            lobbyTextArea.setText(sb.toString());
+            lobbyTextArea.setEditable(false);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+        }
     }
 }

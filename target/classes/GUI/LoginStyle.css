@@ -1,0 +1,40 @@
+.label {
+    -fx-font-size: 18;
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+    -fx-alignment: center;
+}
+.button {
+    -fx-font-size: 25;
+    -fx-font-weight: bold;
+    -fx-font-style: italic;
+    -fx-background-radius: 50px;
+    -fx-font-family: "Lucida Console";
+    -fx-background-color: blue;
+    -fx-text-fill: red;
+}
+
+.text-field {
+    -fx-background-color: -fx-text-box-border, -fx-background ;
+    -fx-background-insets: 0, 0 0 1 0 ;
+    -fx-font-size: 25;
+    -fx-font-weight: bold;
+    -fx-font-style: italic;
+    -fx-background-radius: 50px;
+    -fx-font-family: "Lucida Console";
+}
+.text-field:focused {
+    -fx-background-color: -fx-focus-color, -fx-background ;
+}
+#Title {
+    -fx-font-style: italic;
+    -fx-font-weight: bold;
+    -fx-font-family: "Lucida Console";
+    -fx-font-size: 25;
+}
+
+.button:hover {
+    -fx-text-fill: blue;
+    -fx-background-color: red;
+}

@@ -113,9 +113,7 @@ public class SketchifyController implements Initializable {
     private double x = 0;
     private double y = 0;
     private String actiontype = "";
-
-    private Thread chatListener;
-    private Thread drawListener;
+    private List<Object[]> userList;
 
 
     // Optional: track if the user guessed
@@ -132,9 +130,6 @@ public class SketchifyController implements Initializable {
 
         CurrentWord.setText(word1);
 
-        //Initialize Timer
-        initializeTimeline(); // same logic as before
-
         //Chat & player list areas not editable by user
         Chat.setEditable(false);
         PlayerList.setEditable(false);
@@ -150,6 +145,8 @@ public class SketchifyController implements Initializable {
 //        } catch (IOException e) {
 //            e.printStackTrace();
 //            return;
+
+
 //        }
 
 
@@ -161,15 +158,21 @@ public class SketchifyController implements Initializable {
 
         // Or handle mouse events here directly:
         setUpDrawingEvents();
+        initializeTimeline(); // same logic as before
+    }
 
-        //Start chat & draw listener threads
-        chatListener = new Thread(this::listenForChatMessages, "ChatListener");
+    private void startThreads() {
+        Thread chatListener = new Thread(this::listenForChatMessages, "ChatListener");
         chatListener.setDaemon(true);
         chatListener.start();
 
-        drawListener = new Thread(this::listenForDraws, "DrawListener");
+        Thread drawListener = new Thread(this::listenForDraws, "DrawListener");
         drawListener.setDaemon(true);
         drawListener.start();
+
+//        Thread userListener = new Thread(this::listenForUsers, "UserListener");
+//        userListener.setDaemon(true);
+//        userListener.start();
     }
 
     // Example of capturing mouse events directly
@@ -328,17 +331,17 @@ public class SketchifyController implements Initializable {
     // ---------------------------------------
     // Clean up on stop
     // ---------------------------------------
-    public void stopThreads() {
-        if (chatListener != null) {
-            chatListener.interrupt();
-        }
-        if (drawListener != null) {
-            drawListener.interrupt();
-        }
-        if (timeline != null) {
-            timeline.stop();
-        }
-    }
+//    public void stopThreads() {
+//        if (chatListener != null) {
+//            chatListener.interrupt();
+//        }
+//        if (drawListener != null) {
+//            drawListener.interrupt();
+//        }
+//        if (timeline != null) {
+//            timeline.stop();
+//        }
+//    }
 
     // ---------------------------------------
     // Generate random words
@@ -383,14 +386,41 @@ public class SketchifyController implements Initializable {
         return randomWord;
     }
     public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn) throws InterruptedException {
-        chatSpace = chatSpaceIn;
-        gameSpace = gameSpaceIn;
-        drawSpace = drawSpaceIn;
-        System.out.println("Host game chatSpace contain "
-                + chatSpace.queryAll().toString()
-                + " and gameSpace "
-                + gameSpace.queryAll(new ActualField("user"), new FormalField(String.class)).toString()
-                + " and drawSpace "
-                + drawSpace.queryAll().toString());
+        this.chatSpace = chatSpaceIn;
+        this.gameSpace = gameSpaceIn;
+        this.drawSpace = drawSpaceIn;
+        startThreads();
+        updatePlayerList();
+//        System.out.println("Host game chatSpace contain "
+//                + chatSpace.queryAll().toString()
+//                + " and gameSpace "
+//                + gameSpace.queryAll(new ActualField("user"), new FormalField(String.class)).toString()
+//                + " and drawSpace "
+//                + drawSpace.queryAll().toString());
+    }
+
+    private void updatePlayerList() {
+        try {
+            // Query all tuples of the form ("user", <String>)
+            userList = gameSpace.queryAll(
+                    new ActualField("user"),
+                    new FormalField(String.class)
+            );
+
+            // Build a display string
+            StringBuilder sb = new StringBuilder();
+            for (Object[] userTuple : userList) {
+                String username = (String) userTuple[1];
+                sb.append(username).append("\n");
+            }
+
+            // Show them in the lobbyTextArea
+            PlayerList.setText(sb.toString());
+            PlayerList.setEditable(false);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+        }
     }
 }

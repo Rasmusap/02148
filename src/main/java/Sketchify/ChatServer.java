@@ -10,7 +10,8 @@ import org.jspace.SpaceRepository;
 
 public class ChatServer {
     public static void main(String[] args) {
-
+        ChatServer server = new ChatServer();
+        server.startServer();
     }
 
     public void startServer() {

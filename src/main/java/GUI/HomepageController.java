@@ -35,7 +35,7 @@ public class HomepageController {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("host-game.fxml"));
         Parent root = loader.load();
 
-        HostGameController controller = new HostGameController();
+        HostGameController controller = loader.getController();
         controller.setSpaces(chatSpace, gameSpace, drawSpace);
 
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();

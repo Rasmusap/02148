@@ -28,3 +28,6 @@
     -fx-font-weight: bold;
     -fx-font-style: italic;
 }
+.text-area {
+    -fx-font-size: 18px;
+}
