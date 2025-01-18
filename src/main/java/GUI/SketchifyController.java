@@ -94,11 +94,8 @@ public class SketchifyController implements Initializable {
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(2);
 
-        // The random word lines from old "App"
-        word1 = generateRandomWord();
-        word2 = generateRandomWord();
-        word3 = generateRandomWord();
-        selectedWord = word1;
+        // The random word
+        selectedWord = generateRandomWord();
 
         // Display the initial word in the UI if needed
         CurrentWord.setText(selectedWord);
@@ -140,6 +137,7 @@ public class SketchifyController implements Initializable {
 
         // Optional: Show an updated list of users in "PlayerList"
         updatePlayerList();
+        startGame();
     }
 
     private void startThreads() {
@@ -411,17 +409,15 @@ public class SketchifyController implements Initializable {
     private void startGame() {
         // Example of setting up a new round or choosing a drawer
         try {
-            if (lastDrawer == null) {
-                chooseRandomPlayer();
-                gameSpace.put("game", "drawer", chosenDrawer);
-                gameSpace.put("game", "start");
-                gameSpace.put("game", "timerAction", "start");
-                if (!drawerAppended) {
-                    Chat.appendText("Drawer selected " + getDrawer() + "\n");
-                    drawerAppended = true;
-                }
-                isolateDrawerAndGuesser();
+            chooseRandomPlayer();
+            gameSpace.put("game", "drawer", chosenDrawer);
+            gameSpace.put("game", "start");
+            gameSpace.put("game", "timerAction", "start");
+            if (!drawerAppended) {
+                Chat.appendText("Drawer selected " + getDrawer() + "\n");
+                drawerAppended = true;
             }
+            isolateDrawerAndGuesser();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -500,8 +496,9 @@ public class SketchifyController implements Initializable {
         seconds = 61;
         timeline.playFromStart();
         timeline.play();
-        
+
         isolateDrawerAndGuesser();
+        lastDrawer = null;
         updateHiddenWord();
     }
 
@@ -643,24 +640,31 @@ public class SketchifyController implements Initializable {
     public void setStrokeBlue(ActionEvent event) {
         gc.setStroke(Color.BLUE);
     }
+
     public void setStrokeBlack(ActionEvent event) {
         gc.setStroke(Color.BLACK);
     }
+
     public void setStrokeBrown(ActionEvent event) {
         gc.setStroke(Color.BROWN);
     }
+
     public void setStrokeGreen(ActionEvent event) {
         gc.setStroke(Color.GREEN);
     }
+
     public void setStrokeRed(ActionEvent event) {
         gc.setStroke(Color.RED);
     }
+
     public void setStrokeYellow(ActionEvent event) {
         gc.setStroke(Color.YELLOW);
     }
+
     public void setStrokePink(ActionEvent event) {
         gc.setStroke(Color.PINK);
     }
+
     public void setStrokeTurquoise(ActionEvent event) {
         gc.setStroke(Color.TURQUOISE);
     }
