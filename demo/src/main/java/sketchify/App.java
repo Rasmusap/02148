@@ -380,7 +380,6 @@ public class App extends Application {
     }
 
     private boolean isGuessCorrect = false;
-    private boolean isWordAppended = false;
     private void checkGuess(String message) {
         try {
             gameStatus = gameSpace.queryAll(
@@ -388,22 +387,21 @@ public class App extends Application {
                 new ActualField("selectedWord"),
                 new FormalField(String.class)
             );
-
+    
             selectedWord = (String) gameStatus.get(0)[2];
 
-                if (message.trim().equalsIgnoreCase(selectedWord) && !isGuessCorrect) {
-                    isGuessed = true;
-                    chatInput.setEditable(false);
-                    sendBtn.setDisable(true);
-                    gameSpace.put("game", "timerAction", "stop");
-                    isGuessCorrect = true;
-                    generateNewRound();
+            if (message.trim().equalsIgnoreCase(selectedWord) && !isGuessCorrect) {
+                isGuessed = true;
+                gameSpace.put("game", "timerAction", "stop");
+    
+                isGuessCorrect = true;
+                chatSpace.put("message", "The word has been guessed correctly!");
+    
+                // Reset and stop the timer
+                gameSpace.put("game", "timerAction", "reset");
 
-                    if (!isWordAppended) {
-                        chatDisplay.appendText("The word has been guessed correctly!\n");
-                        isWordAppended = true;
-                    }
-                    isolateDrawerAndGuesser();  
+                generateNewRound();
+                isolateDrawerAndGuesser();
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -411,7 +409,6 @@ public class App extends Application {
     }
 
     private void generateNewRound() {
-        isWordAppended = false;
         hasGuessedCorrectly = false;
         drawerAppended = false;
         isGuessCorrect = false;
@@ -419,39 +416,38 @@ public class App extends Application {
         word1 = generateRandomWord();
         word2 = generateRandomWord();
         word3 = generateRandomWord();
+
+        selectWord(word1, word2, word3);
+        try {
+            gameSpace.put("game", "selectedWord", selectedWord);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     
         label1.setText(word1);
         label2.setText(word2);
         label3.setText(word3);
-
+    
         System.out.println(word1);
         System.out.println(word2);
         System.out.println(word3);
-
+    
         guessedField.setText("");
         chatInput.setEditable(true);
         sendBtn.setDisable(false);
         wordlabel.setText("");
-
-        selectWord(word1, word2, word3);
-        String selectWord = selectedWord;
-
-        try {
-            gameSpace.put("game", "selectedWord", selectWord);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            ex.printStackTrace();
-        }
     
         Platform.runLater(() -> {
-            top.getChildren().addAll(label1, label2, label3);
             try {
+                top.getChildren().addAll(label1, label2, label3);
+                
+                selectWord(word1, word2, word3);
                 chooseRandomPlayer();
                 gameSpace.put("game", "drawer", chosenDrawer);
-                gameSpace.put("game", "selectedWord", selectWord);
+                gameSpace.put("game", "selectedWord", selectedWord);
                 gameSpace.put("game", "timerAction", "start");
                 gameSpace.put("game", "start");
-
+    
                 if (!drawerAppended) {
                     chatDisplay.appendText("[System] Drawer selected: " + getDrawer() + "\n");
                     drawerAppended = true;
@@ -466,6 +462,7 @@ public class App extends Application {
         seconds = 61;
         timeline.playFromStart();
     }
+    
 
     private void initializeTimeline(Label timerLabel) {
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -592,34 +589,37 @@ public class App extends Application {
                 e.printStackTrace();
             }
         }
-    }    
-    
+    } 
+
     private void listenForChatMessages() {
-        while (!Thread.currentThread().isInterrupted()) {
-            try {
-                List<Object[]> messages = chatSpace.queryAll(
-                    new ActualField("message"),
-                    new FormalField(String.class)
-                );
-                if (messages.size() > lastChatCount) {
-                    for (int i = lastChatCount; i < messages.size(); i++) {
-                        String text = (String) messages.get(i)[1];
-                        Platform.runLater(() -> {
-                            chatDisplay.appendText(text + "\n");
-                        });
-                    }
-                    lastChatCount = messages.size();
+    while (!Thread.currentThread().isInterrupted()) {
+        try {
+            List<Object[]> messages = chatSpace.queryAll(
+                new ActualField("message"),
+                new FormalField(String.class)
+            );
+
+            if (messages.size() > lastChatCount) {
+                for (int i = lastChatCount; i < messages.size(); i++) {
+                    String text = (String) messages.get(i)[1];
+                    Platform.runLater(() -> {
+                        chatDisplay.appendText(text + "\n");
+                    });
                 }
-                Thread.sleep(300);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            } catch (Exception e) {
-                e.printStackTrace();
+                lastChatCount = messages.size();
             }
+
+            // Delay before the next check
+            Thread.sleep(300);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            break;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
-
+}
+ 
     private void listenForDraws() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
