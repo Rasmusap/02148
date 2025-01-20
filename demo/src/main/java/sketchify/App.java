@@ -250,8 +250,6 @@ public class App extends Application {
             canvas.setHeight(newH.doubleValue());
         });
 
-        selectWord(word1, word2, word3);
-        
         centerVBox.getChildren().addAll(wordlabel, canvas);
         center.getChildren().add(centerVBox);
 
@@ -306,6 +304,7 @@ public class App extends Application {
 
     private void startGame() {
         isStarted = false;
+        selectWord(word1, word2, word3);
         try {
             if (lastDrawer == null) {
                 chooseRandomPlayer();
@@ -334,15 +333,21 @@ public class App extends Application {
                 label3.setVisible(true);
                 guessedField.setVisible(true);
             });
+        } else {
+            label1.setVisible(false);
+            label2.setVisible(false);
+            label3.setVisible(false);
+            guessedField.setVisible(false);
+            wordlabel.setText("");
         }
     }
 
     private void selectWord(String word1, String word2, String word3) {
         label1.setOnAction((e) -> {
             wordlabel.setText(word1);
-            selectedWord = word1;
+            String selectedWord1 = word1;
             try {
-                gameSpace.put("game", "selectedWord", selectedWord);
+                gameSpace.put("game", "selectedWord", selectedWord1);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 ex.printStackTrace();
@@ -353,9 +358,9 @@ public class App extends Application {
         });
         label2.setOnAction(e -> {
             wordlabel.setText(word2);
-            selectedWord = word2;
+            String selectedWord2 = word2;
             try {
-                gameSpace.put("game", "selectedWord", selectedWord);
+                gameSpace.put("game", "selectedWord", selectedWord2);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 ex.printStackTrace();
@@ -366,9 +371,9 @@ public class App extends Application {
         });
         label3.setOnAction(e -> {
             wordlabel.setText(word3);
-            selectedWord = word3;
+            String selectedWord3 = word3;
             try {
-                gameSpace.put("game", "selectedWord", selectedWord);
+                gameSpace.put("game", "selectedWord", selectedWord3);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 ex.printStackTrace();
@@ -377,6 +382,7 @@ public class App extends Application {
             parent.getChildren().removeAll(label1, label2, label3);
             timeline.play();
         });
+        System.out.println(selectedWord);
     }
 
     private boolean isGuessCorrect = false;
@@ -396,10 +402,6 @@ public class App extends Application {
     
                 isGuessCorrect = true;
                 chatSpace.put("message", "The word has been guessed correctly!");
-    
-                // Reset and stop the timer
-                gameSpace.put("game", "timerAction", "reset");
-
                 generateNewRound();
                 isolateDrawerAndGuesser();
             }
@@ -409,6 +411,34 @@ public class App extends Application {
     }
 
     private void generateNewRound() {
+
+        try {
+            gameSpace.getp(new ActualField("game"), new ActualField("selectedWord"), new FormalField(String.class));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            gameSpace.put("game", "selectedWord", selectedWord);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            gameSpace.getp(new ActualField("game"), new ActualField("drawer"), new FormalField(String.class));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        chooseRandomPlayer();
+
+        try {
+            gameSpace.put("game", "selectedWord", chosenDrawer);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        
         hasGuessedCorrectly = false;
         drawerAppended = false;
         isGuessCorrect = false;
@@ -417,37 +447,20 @@ public class App extends Application {
         word2 = generateRandomWord();
         word3 = generateRandomWord();
 
-        selectWord(word1, word2, word3);
-        try {
-            gameSpace.put("game", "selectedWord", selectedWord);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    
         label1.setText(word1);
         label2.setText(word2);
         label3.setText(word3);
-    
-        System.out.println(word1);
-        System.out.println(word2);
-        System.out.println(word3);
     
         guessedField.setText("");
         chatInput.setEditable(true);
         sendBtn.setDisable(false);
         wordlabel.setText("");
-    
+
         Platform.runLater(() -> {
             try {
                 top.getChildren().addAll(label1, label2, label3);
-                
-                selectWord(word1, word2, word3);
-                chooseRandomPlayer();
-                gameSpace.put("game", "drawer", chosenDrawer);
-                gameSpace.put("game", "selectedWord", selectedWord);
                 gameSpace.put("game", "timerAction", "start");
-                gameSpace.put("game", "start");
-    
+                
                 if (!drawerAppended) {
                     chatDisplay.appendText("[System] Drawer selected: " + getDrawer() + "\n");
                     drawerAppended = true;
@@ -462,7 +475,6 @@ public class App extends Application {
         seconds = 61;
         timeline.playFromStart();
     }
-    
 
     private void initializeTimeline(Label timerLabel) {
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -472,7 +484,6 @@ public class App extends Application {
             } else {
                 timerLabel.setText("Time's up!");
                 timeline.stop();
-                generateNewRound();
             }
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -609,7 +620,6 @@ public class App extends Application {
                 lastChatCount = messages.size();
             }
 
-            // Delay before the next check
             Thread.sleep(300);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
