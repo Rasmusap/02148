@@ -13,6 +13,7 @@ import java.net.ConnectException;
 import java.util.Objects;
 
 public class LoginPage extends Application {
+    private String role = "";
 
     public static void main(String[] args) {
         launch(args);
@@ -29,8 +30,11 @@ public class LoginPage extends Application {
             ChatServer server = new ChatServer();
             server.startServer();
             System.out.println("[LoginPage] Started a new ChatServer on port 8753.");
+            role = "Host";
+            System.out.println(role);
         } else {
             System.out.println("[LoginPage] Server already running. Skipping new ChatServer startup.");
+            role = "Client";
         }
 
         // 3. Load the login-page.fxml
@@ -70,6 +74,10 @@ public class LoginPage extends Application {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public String getRole() {
+        return role;
     }
 }
 

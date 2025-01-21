@@ -17,7 +17,7 @@ public class SketchifyGame extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("sketchify-page.fxml")));
-        Scene scene = new Scene(root, 1920, 1080);
+        Scene scene = new Scene(root, 1080, 720);
 
         //css style sheet added
         String css = Objects.requireNonNull(

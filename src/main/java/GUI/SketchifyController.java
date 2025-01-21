@@ -65,6 +65,7 @@ public class SketchifyController implements Initializable {
     private boolean roundOngoing = false;
 
     private String myUsername = "UnknownUser";
+    private String myRole;
     private String chosenDrawer = null;
     private String selectedWord = "";
 
@@ -92,7 +93,8 @@ public class SketchifyController implements Initializable {
      * and the local username. After that, we start threads, set up the timeline,
      * and immediately start a round for convenience.
      */
-    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String username) {
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String username, String role) {
+        this.myRole = role;
         this.chatSpace = chatSpaceIn;
         this.gameSpace = gameSpaceIn;
         this.drawSpace = drawSpaceIn;
@@ -178,6 +180,11 @@ public class SketchifyController implements Initializable {
             Object[] oldWord = gameSpace.getp(
                     new ActualField("game"),
                     new ActualField("selectedWord"),
+                    new FormalField(String.class)
+            );
+            Object[] oldDrawer = gameSpace.getp(
+                    new ActualField("game"),
+                    new ActualField("drawer"),
                     new FormalField(String.class)
             );
             // (If oldWord != null, we just ignore it since we want a fresh word)
@@ -281,12 +288,13 @@ public class SketchifyController implements Initializable {
             CurrentWord.setVisible(true);
             CurrentWordHidden.setVisible(false);
             enableCanvasDrawing();
+            guessTextField.setEditable(false);
         } else {
             // I'm a guesser
             isDrawer = false;
             CurrentWord.setVisible(false);
             // Show underscores
-            CurrentWordHidden.setText("_".repeat(actualWord.length()));
+            CurrentWordHidden.setText("_ ".repeat(actualWord.length()));
             CurrentWordHidden.setVisible(true);
             disableCanvasDrawing();
         }

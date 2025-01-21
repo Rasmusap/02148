@@ -6,28 +6,29 @@
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
-<AnchorPane fx:id="mainScene" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" stylesheets="@HomePageStyle.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.HomepageController">
+<AnchorPane fx:id="mainScene" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1080.0" stylesheets="@HomePageStyle.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.HomepageController">
    <children>
-      <Button fx:id="ExitButton" layoutX="810.0" layoutY="609.0" mnemonicParsing="false" onAction="#Exit" prefHeight="75.0" prefWidth="300.0" text="Exit" textFill="WHITE">
-         <font>
-            <Font size="25.0" />
-         </font></Button>
-      <Button fx:id="JoinGameButton" layoutX="810.0" layoutY="503.0" mnemonicParsing="false" onAction="#JoinGame" prefHeight="75.0" prefWidth="300.0" text="Join Game" textFill="WHITE">
+      <Button fx:id="ExitButton" layoutX="390.0" layoutY="569.0" mnemonicParsing="false" onAction="#Exit" prefHeight="75.0" prefWidth="300.0" text="Exit" textFill="WHITE">
          <font>
             <Font size="25.0" />
          </font>
       </Button>
-      <Button fx:id="HostGameButton" layoutX="810.0" layoutY="396.0" mnemonicParsing="false" onAction="#HostGame" prefHeight="75.0" prefWidth="300.0" text="Host Game" textFill="#fcfcfc">
+      <Button fx:id="JoinGameButton" layoutX="390.0" layoutY="463.0" mnemonicParsing="false" onAction="#JoinGame" prefHeight="75.0" prefWidth="300.0" text="Join Game" textFill="WHITE">
          <font>
             <Font size="25.0" />
          </font>
       </Button>
-      <Text fx:id="TitleSketchify" layoutY="137.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Sketchify" textAlignment="CENTER" wrappingWidth="1920.0">
+      <Button fx:id="HostGameButton" layoutX="390.0" layoutY="356.0" mnemonicParsing="false" onAction="#HostGame" prefHeight="75.0" prefWidth="300.0" text="Host Game" textFill="#fcfcfc">
+         <font>
+            <Font size="25.0" />
+         </font>
+      </Button>
+      <Text fx:id="TitleSketchify" layoutX="-3.0" layoutY="113.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Sketchify" textAlignment="CENTER" wrappingWidth="1086.0">
          <font>
             <Font size="44.0" />
          </font>
       </Text>
-      <Text fx:id="gameModeText" layoutY="351.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Select gamemode" textAlignment="CENTER" wrappingWidth="1920.0" />
-      <Label fx:id="nameLabel" layoutX="1.0" layoutY="195.0" prefHeight="17.0" prefWidth="1920.0" text="Welcome" />
+      <Text fx:id="gameModeText" layoutX="-420.0" layoutY="311.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Select gamemode" textAlignment="CENTER" wrappingWidth="1920.0" />
+      <Label fx:id="nameLabel" layoutY="155.0" prefHeight="28.0" prefWidth="1080.0" text="Welcome" />
    </children>
 </AnchorPane>

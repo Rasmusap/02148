@@ -1,5 +1,6 @@
 package GUI;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -11,6 +12,7 @@ import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Scanner;
 
 import org.jspace.*;
@@ -19,6 +21,7 @@ import java.io.IOException;
 
 public class HostGameController {
     private String currentUser;
+    private String myRole;
     private List<Object[]> userList;
     RemoteSpace chatSpace;
     RemoteSpace drawSpace;
@@ -37,11 +40,18 @@ public class HostGameController {
     }
 
     public void StartGame(ActionEvent event) throws IOException, InterruptedException {
+        try {
+            gameSpace.put("game", "startAll");
+            System.out.println("[HostGameController] Put (\"game\", \"startAll\") in gameSpace.");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("sketchify-page.fxml"));
         root = loader.load();
         try {
             SketchifyController sketchifyController = loader.getController();
-            sketchifyController.setSpaces(chatSpace, gameSpace, drawSpace, currentUser);
+            sketchifyController.setSpaces(chatSpace, gameSpace, drawSpace, currentUser, myRole);
         } catch (RuntimeException e) {
             e.printStackTrace();
         }
@@ -57,8 +67,9 @@ public class HostGameController {
         root = loader.load();
 
         HomepageController homepageController = loader.getController();
+        homepageController.setMyRole(myRole);
         homepageController.displayName(gameSpace);
-        homepageController.setSpaces(chatSpace, gameSpace, drawSpace, currentUser);
+        homepageController.setSpaces(chatSpace, gameSpace, drawSpace, currentUser, myRole);
 
         stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
         scene = new Scene(root);
@@ -66,9 +77,10 @@ public class HostGameController {
         stage.show();
     }
 
-    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String myUsername)
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String myUsername, String role)
             throws InterruptedException {
-        currentUser = myUsername;
+        this.myRole = role;
+        this.currentUser = myUsername;
         System.out.println(currentUser);
         chatSpace = chatSpaceIn;
         gameSpace = gameSpaceIn;
@@ -81,6 +93,32 @@ public class HostGameController {
 //                + drawSpace.queryAll().toString());
 
         updateLobbyList();
+        startListeningForStartAll();
+    }
+
+    private void startListeningForStartAll() {
+        Thread t = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    // We do a blocking read for ("game","startAll")
+                    gameSpace.query(new ActualField("game"), new ActualField("startAll"));
+
+                    // If we get here, the host has signaled "startAll".
+                    System.out.println("[HomePageController] Detected (\"game\",\"startAll\"). Loading Sketchify...");
+
+                    // Switch to Sketchify UI on JavaFX thread
+                    Platform.runLater(() -> {
+                        switchToSketchify();
+                    });
+                    break; // or keep listening if you want multiple re-joins
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }, "WaitForStartAll");
+        t.setDaemon(true);
+        t.start();
     }
 
     public void updateLobbyList() {
@@ -106,5 +144,26 @@ public class HostGameController {
             Thread.currentThread().interrupt();
             e.printStackTrace();
         }
+    }
+    private void switchToSketchify() {
+        if (Objects.equals(myRole, "Client")) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("sketchify-page.fxml"));
+                Parent root = loader.load();
+
+                SketchifyController controller = loader.getController();
+                controller.setSpaces(chatSpace, gameSpace, drawSpace, currentUser, myRole);
+
+                Stage stage = (Stage) lobbyTextArea.getScene().getWindow(); // or any node from the scene
+                Scene scene = new Scene(root);
+                stage.setScene(scene);
+                stage.show();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    public void setMyRole(String role) {
+        this.myRole = role;
     }
 }

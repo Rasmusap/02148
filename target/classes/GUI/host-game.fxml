@@ -6,36 +6,37 @@
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.HostGameController">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.HostGameController">
    <children>
-      <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" stylesheets="@HostGameStyle.css">
+      <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1.0" stylesheets="@HostGameStyle.css">
          <children>
-            <Button fx:id="GoBack" layoutX="1298.0" layoutY="609.0" mnemonicParsing="false" onAction="#GoBack" prefHeight="75.0" prefWidth="300.0" text="Go back" textFill="WHITE">
-               <font>
-                  <Font size="25.0" />
-               </font>
-            </Button>
-            <Button fx:id="StartGameButton" layoutX="1298.0" layoutY="503.0" mnemonicParsing="false" onAction="#StartGame" prefHeight="75.0" prefWidth="300.0" text="Start Game" textFill="WHITE">
-               <font>
-                  <Font size="25.0" />
-               </font>
-            </Button>
-            <Button fx:id="InvitePlayersButton" layoutX="1298.0" layoutY="396.0" mnemonicParsing="false" onAction="#InvitePlayers" prefHeight="75.0" prefWidth="300.0" text="Invite Players" textFill="#fcfcfc">
-               <font>
-                  <Font size="25.0" />
-               </font>
-            </Button>
-            <Text fx:id="TitleHostGame" layoutY="121.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Host Game" textAlignment="CENTER" wrappingWidth="1920.0">
+            <Text fx:id="TitleHostGame" layoutY="86.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Host Game" textAlignment="CENTER" wrappingWidth="1080.0">
                <font>
                   <Font size="44.0" />
                </font>
             </Text>
-            <Text fx:id="Lobby" layoutX="80.0" layoutY="321.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Lobby" textAlignment="CENTER" wrappingWidth="524.0">
-               <font>
-                  <Font size="42.0" />
-               </font></Text>
-            <TextArea fx:id="lobbyTextArea" layoutX="92.0" layoutY="330.0" prefHeight="421.0" prefWidth="499.0" />
          </children>
       </AnchorPane>
+      <Button fx:id="GoBack" layoutX="656.0" layoutY="464.0" mnemonicParsing="false" onAction="#GoBack" prefHeight="75.0" prefWidth="300.0" text="Go back" textFill="WHITE">
+         <font>
+            <Font size="25.0" />
+         </font>
+      </Button>
+      <Button fx:id="StartGameButton" layoutX="656.0" layoutY="358.0" mnemonicParsing="false" onAction="#StartGame" prefHeight="75.0" prefWidth="300.0" text="Start Game" textFill="WHITE">
+         <font>
+            <Font size="25.0" />
+         </font>
+      </Button>
+      <Button fx:id="InvitePlayersButton" layoutX="656.0" layoutY="251.0" mnemonicParsing="false" onAction="#InvitePlayers" prefHeight="75.0" prefWidth="300.0" text="Invite Players" textFill="#fcfcfc">
+         <font>
+            <Font size="25.0" />
+         </font>
+      </Button>
+      <Text fx:id="Lobby" layoutX="69.0" layoutY="175.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Lobby" textAlignment="CENTER" wrappingWidth="524.0">
+         <font>
+            <Font size="42.0" />
+         </font>
+      </Text>
+      <TextArea fx:id="lobbyTextArea" layoutX="81.0" layoutY="184.0" prefHeight="421.0" prefWidth="499.0" />
    </children>
 </AnchorPane>

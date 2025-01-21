@@ -41,14 +41,19 @@ public class LoginController {
     private Stage stage;
     private Scene scene;
     private String myUsername;
+    private String myRole;
 
     public void enterGame(ActionEvent event) throws IOException, InterruptedException {
+        LoginPage loginRole = new LoginPage();
+        myRole = loginRole.getRole();
+        System.out.println(myRole);
         myUsername = userNameTF.getText();
         if (myUsername.isEmpty()) {
             enterUsernamePrompt.setText("No username entered! please enter username");
             enterUsernamePrompt.setAlignment(Pos.CENTER);
             return; // Stop here so the user can try again
         }
+
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("home-page.fxml"));
         root = loader.load();
@@ -74,8 +79,9 @@ public class LoginController {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        homepageController.setMyRole(myRole);
         homepageController.displayName(gameSpace);
-        homepageController.setSpaces(chatSpace, gameSpace, drawSpace, myUsername);
+        homepageController.setSpaces(chatSpace, gameSpace, drawSpace, myUsername, myRole);
 
         stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
         scene = new Scene(root);
