@@ -48,15 +48,13 @@ public class App extends Application {
 
     private Set<String> generatedWords = new HashSet<>();
 
-    String word1 = generateRandomWord();
-    String word2 = generateRandomWord();
-    String word3 = generateRandomWord();
     String selectedWord = "";
     String currentDrawer = "";
     double x = 0;
     double y = 0;
     int seconds = 60;
     boolean isGuessed = false;
+    boolean isStarted = false;
     private int lastDrawCount = 0;
     private int lastChatCount = 0;
     private int lastUserCount = 0;
@@ -85,6 +83,7 @@ public class App extends Application {
     private Timeline timeline;
     private ListView<String> userList;
     private List<Object[]> gameStatus;
+    String word = "";
 
     public static void main(String[] args) {
         launch(args);
@@ -106,9 +105,9 @@ public class App extends Application {
         myUsername = result.get().trim();
         System.out.println("[App] My username: " + myUsername);
 
-        String chatURI = "tcp://127.0.0.1:8753/chat?keep";
-        String serverURI = "tcp://127.0.0.1:8753/draw?keep";
-        String gameURI = "tcp://127.0.0.1:8753/game?keep";
+        String chatURI = "tcp://192.168.0.247:8753/chat?keep";
+        String serverURI = "tcp://192.168.0.247:8753/draw?keep";
+        String gameURI = "tcp://192.168.0.247:8753/game?keep";
         try {
             chatSpace = new RemoteSpace(chatURI);
             drawSpace = new RemoteSpace(serverURI);
@@ -146,23 +145,19 @@ public class App extends Application {
 
         HBox.setHgrow(guessedField, Priority.ALWAYS);
 
-        label1 = new Button(word1);
-        label2 = new Button(word2);
-        label3 = new Button(word3);
-
         top.setPadding(new Insets(0, 182, 0, 0));
 
-        label1.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-padding: 5px; -fx-border-color: blue; -fx-border-width: 2px;");
-        label2.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-padding: 5px; -fx-border-color: blue; -fx-border-width: 2px;");
-        label3.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-padding: 5px; -fx-border-color: blue; -fx-border-width: 2px;");
+        //label1.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-padding: 5px; -fx-border-color: blue; -fx-border-width: 2px;");
+        //label2.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-padding: 5px; -fx-border-color: blue; -fx-border-width: 2px;");
+        //label3.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-padding: 5px; -fx-border-color: blue; -fx-border-width: 2px;");
 
         top.setSpacing(20);
         top.setAlignment(Pos.CENTER);
-        top.getChildren().addAll(label1, label2, label3, guessedField, timerLabel);
+        top.getChildren().addAll(guessedField, timerLabel);
 
-        label1.setVisible(false);
-        label2.setVisible(false);
-        label3.setVisible(false);
+        //label1.setVisible(false);
+        //label2.setVisible(false);
+        //label3.setVisible(false);
         guessedField.setVisible(false);
         timerLabel.setVisible(false);
 
@@ -180,6 +175,7 @@ public class App extends Application {
         start = new Button("Start");
         start.setOnAction(e -> {
             startGame();
+            isStarted = true;
         });
 
         center.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
@@ -248,8 +244,6 @@ public class App extends Application {
             canvas.setHeight(newH.doubleValue());
         });
 
-        selectWord(word1, word2, word3);
-
         centerVBox.getChildren().addAll(wordlabel, canvas);
         center.getChildren().add(centerVBox);
 
@@ -301,17 +295,21 @@ public class App extends Application {
     }
 
     private boolean drawerAppended = false;
+    private boolean isSelected = false;
 
     private void startGame() {
+        isStarted = false;
+        if (!isSelected) {
+            selectedWord = generateNextWord();
+            isSelected = true;
+        }
+
         try {
             if (lastDrawer == null) {
                 chooseRandomPlayer();
                 gameSpace.put("game", "drawer", chosenDrawer);
                 gameSpace.put("game", "start");
                 gameSpace.put("game", "timerAction", "start");
-
-                start.setDisable(true);
-
                 if (!drawerAppended) {
                     chatDisplay.appendText("[System] Drawer selected: " + getDrawer() + "\n");
                     drawerAppended = true;
@@ -323,125 +321,76 @@ public class App extends Application {
         }
     }
 
-
     private void isolateDrawerAndGuesser() {
         if (myUsername.equalsIgnoreCase(getDrawer())) {
             Draw draw = new Draw(x, y, actiontype);
             draw.isPressed(canvas, gc, drawSpace);
             draw.isDragged(canvas, gc, drawSpace);
             Platform.runLater(() -> {
-                label1.setVisible(true);
-                label2.setVisible(true);
-                label3.setVisible(true);
                 guessedField.setVisible(true);
-                timerLabel.setVisible(true);
+                wordlabel.setText(selectedWord);
             });
         } else {
-            Platform.runLater(() -> {
-                timerLabel.setVisible(true);
-            });
+            guessedField.setVisible(false);
+            wordlabel.setText("");
         }
     }
 
-    private void selectWord(String word1, String word2, String word3) {
-        initializeTimeline(timerLabel);
-        label1.setOnAction((e) -> {
-            wordlabel.setText(word1);
-            selectedWord = word1;
-            HBox parent = (HBox) label1.getParent();
-            parent.getChildren().removeAll(label1, label2, label3);
-            timeline.play();
-        });
-        label2.setOnAction(e -> {
-            wordlabel.setText(word2);
-            selectedWord = word2;
-            HBox parent = (HBox) label2.getParent();
-            parent.getChildren().removeAll(label1, label2, label3);
-            timeline.play();
-        });
-        label3.setOnAction(e -> {
-            wordlabel.setText(word3);
-            selectedWord = word3;
-            HBox parent = (HBox) label3.getParent();
-            parent.getChildren().removeAll(label1, label2, label3);
-            timeline.play();
-        });
-    }
-
     private boolean isGuessCorrect = false;
-    private boolean isWordAppended = false;
     private void checkGuess(String message) {
         try {
-            gameStatus = gameSpace.queryAll(
-                    new ActualField("game"),
-                    new ActualField("selectedWord"),
-                    new FormalField(String.class)
-            );
-            if (message.trim().equalsIgnoreCase(selectedWord) && !isGuessCorrect) {
-                isGuessed = true;
-                chatInput.setEditable(false);
-                sendBtn.setDisable(true);
-                gameSpace.put("game", "timerAction", "stop");
-                isGuessCorrect = true;
-                generateNewRound();
-
-                if (!isWordAppended) {
-                    chatDisplay.appendText("The word has been guessed correctly!\n");
-                    isWordAppended = true;
-                }
-                isolateDrawerAndGuesser();
+            if (myUsername.equalsIgnoreCase(getDrawer())) {
+                chatSpace.put("message", "[System] Type " + "new round" +  " to start a new round!");
+            } else {
+                chatSpace.put("message", "[System] Wait for drawer to start a new round!");
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-        timeline.stop();
-    }
+        if (message.trim().equalsIgnoreCase(selectedWord) && !isGuessCorrect) {
+            isGuessed = true;
+            isGuessCorrect = true;
 
-    private void generateNewRound() {
-        isWordAppended = false;
-        hasGuessedCorrectly = false;
-        drawerAppended = false;
-        isGuessCorrect = false;
-        isGuessed = false;
-        word1 = generateRandomWord();
-        word2 = generateRandomWord();
-        word3 = generateRandomWord();
-
-        label1.setText(word1);
-        label2.setText(word2);
-        label3.setText(word3);
-
-        System.out.println(word1);
-        System.out.println(word2);
-        System.out.println(word3);
-
-        guessedField.setText("");
-        chatInput.setEditable(true);
-        sendBtn.setDisable(false);
-        wordlabel.setText("");
-
-        Platform.runLater(() -> {
-            top.getChildren().addAll(label1, label2, label3);
-            selectWord(word1, word2, word3);
-            String selectWord = selectedWord;
-            System.out.println(selectWord);
             try {
-                chooseRandomPlayer();
-                gameSpace.put("game", "drawer", chosenDrawer);
-                gameSpace.put("game", "selectedWord", selectWord);
-                gameSpace.put("game", "timerAction", "start");
+                chatSpace.put("message", "[System] Correct guess: " + selectedWord + " was guessed by " + myUsername);
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        startNewRound();
+    }
+
+    private void startNewRound() {
+        isSelected = false;
+        drawerAppended = false;
+        isGuessCorrect = false;
+        hasGuessedCorrectly = false;
+
+        try {
+            gameSpace.getp(new ActualField("game"), new ActualField("drawer"), new FormalField(String.class));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        chooseRandomPlayer();
+        try {
+            gameSpace.put("game", "drawer", chosenDrawer);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        Platform.runLater(() -> {
+            wordlabel.setText(selectedWord);
         });
 
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
-        seconds = 61;
-        timeline.playFromStart();
-        timeline.play();
+        Platform.runLater(() -> {
+            startGame();
+        });
     }
+
 
     private void initializeTimeline(Label timerLabel) {
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -451,7 +400,6 @@ public class App extends Application {
             } else {
                 timerLabel.setText("Time's up!");
                 timeline.stop();
-                generateNewRound();
             }
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -469,8 +417,10 @@ public class App extends Application {
         String text = chatInput.getText().trim();
         if (!text.isEmpty()) {
             try {
-                chatSpace.put("message", text);
-                checkGuess(text);
+                chatSpace.put("message", "[" + myUsername + "]: " + text);
+                if (text.equalsIgnoreCase(selectedWord) || (text.equalsIgnoreCase("new round") && myUsername.equalsIgnoreCase(getDrawer()))) {
+                    checkGuess(text);
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 e.printStackTrace();
@@ -493,9 +443,11 @@ public class App extends Application {
                     if (!chatMessages.isEmpty()) {
                         String guess = (String) chatMessages.get(0)[1];
                         if (!hasGuessedCorrectly) {
-                            checkGuess(guess);
-                            Thread.sleep(10);
-                            hasGuessedCorrectly = true;
+                            if (guess.equalsIgnoreCase(selectedWord)) {
+                                checkGuess(guess);
+                                Thread.sleep(10);
+                                hasGuessedCorrectly = true;
+                            }
                         }
                     }
 
@@ -544,6 +496,7 @@ public class App extends Application {
                     if ("start".equals(status)) {
                         Platform.runLater(() -> {
                             startGame();
+                            timerLabel.setVisible(true);
                         });
                     }
 
@@ -557,7 +510,6 @@ public class App extends Application {
                         }
                     }
                 }
-
                 Thread.sleep(500);
 
             } catch (InterruptedException e) {
@@ -576,6 +528,7 @@ public class App extends Application {
                         new ActualField("message"),
                         new FormalField(String.class)
                 );
+
                 if (messages.size() > lastChatCount) {
                     for (int i = lastChatCount; i < messages.size(); i++) {
                         String text = (String) messages.get(i)[1];
@@ -585,6 +538,7 @@ public class App extends Application {
                     }
                     lastChatCount = messages.size();
                 }
+
                 Thread.sleep(300);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -665,44 +619,48 @@ public class App extends Application {
         return null;
     }
 
-    public String generateRandomWord() {
-        String randomWord = "";
-        List<String> words = new ArrayList<>();
+    public String generateNextWord() {
+        String filePath = "C:\\Users\\nicla\\OneDrive\\Dokumenter\\GitHub\\02148\\demo\\src\\words.txt";
+        String nextWord = null;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader("src/main/resources/Sketchify/words.txt"))) {
+        // Static tracker for generated words and file reader
+        if (generatedWords == null) {
+            generatedWords = new HashSet<>();
+        }
+        BufferedReader reader = null;
+
+        try {
+            reader = new BufferedReader(new FileReader(filePath));
             String line;
             while ((line = reader.readLine()) != null) {
-                String[] wordsLine = line.split("\\s+");
-                words.addAll(Arrays.asList(wordsLine));
+                String[] words = line.split("\\s+");
+                for (String word : words) {
+                    if (!generatedWords.contains(word)) {
+                        generatedWords.add(word); // Track used words
+                        nextWord = word; // Found the next unused word
+                        break;
+                    }
+                }
+                if (nextWord != null) break; // Stop once a word is found
             }
 
-            if (words.isEmpty()) {
-                throw new IllegalStateException("No words found in the file.");
+            if (nextWord == null) {
+                throw new IllegalStateException("No more unused words available in the file.");
             }
-
-            Random rand = new Random();
-            int attempts = 0;
-            int maxAttempts = 100;
-            boolean wordGenerated = false;
-
-            do {
-                if (attempts++ > maxAttempts) {
-                    System.out.println("Max attempts reached, stopping word generation.");
-                    break;
-                }
-                randomWord = words.get(rand.nextInt(words.size()));
-                if (!generatedWords.contains(randomWord)) {
-                    generatedWords.add(randomWord);
-                    wordGenerated = true;
-                }
-            } while (!wordGenerated);
-
         } catch (IOException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Error reading from the file.");
+        } finally {
+            try {
+                if (reader != null) reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
-        return randomWord;
+        return nextWord;
     }
+
 
     private void listenForUsers() {
         while(!Thread.currentThread().isInterrupted()){

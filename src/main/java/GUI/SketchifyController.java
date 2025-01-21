@@ -1,6 +1,5 @@
 package GUI;
 
-import Sketchify.Draw;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -9,7 +8,8 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.*;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -24,139 +24,107 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
+/**
+ * Controls the main Sketchify game scene (sketchify-page.fxml), including
+ * drawing logic, round progression, user updates, and guess checking.
+ */
 public class SketchifyController implements Initializable {
 
-    // FXML fields from "sketchify-page.fxml"
+    // ---- FXML UI References ----
+    @FXML
+    private AnchorPane SceneMain, Tools;
     @FXML
     private Canvas Canvas;
     @FXML
-    private AnchorPane SceneMain;
-    @FXML
-    private TextArea PlayerList;
-    @FXML
-    private Text PlayerListTitle;
-    @FXML
-    private AnchorPane Tools;
+    private TextArea PlayerList, Chat;
     @FXML
     private TextField guessTextField;
     @FXML
-    private Text Title;
+    private Text CurrentWord;       // Drawer sees this
     @FXML
-    private Text CurrentWord;
+    private Text CurrentWordHidden; // Guessers see underscores here
     @FXML
     private Text Timer;
-    @FXML
-    private TextArea Chat;
-    @FXML
-    private Text CurrentWord2;
 
-    // Reference to the remote spaces
-    RemoteSpace drawSpace;
-    RemoteSpace chatSpace;
-    RemoteSpace gameSpace;
+    // ---- Remote Spaces ----
+    private RemoteSpace drawSpace;
+    private RemoteSpace chatSpace;
+    private RemoteSpace gameSpace;
+
+    // ---- Game State & Timers ----
     private GraphicsContext gc;
-    private Set<String> generatedWords = new HashSet<>();
-    private List<Object[]> userList;
+    private Timeline timeline;
+    private int seconds = 60;
     private int lastDrawCount = 0;
     private int lastChatCount = 0;
     private int lastUserCount = 0;
-    private int seconds = 60;  // or 120, etc.
 
-    private int points = 0;
-    private Timeline timeline;
-
-    private String word1, word2, word3;
-    private String selectedWord = "";
+    // ---- Logic for Players/Words/Drawers ----
+    private boolean isDrawer = false;
     private boolean guessedCorrectly = false;
-    private boolean isGuessed = false;
-    private boolean isWordAppended = false;
-    private boolean isGuessCorrect = false;
-    private boolean drawerAppended = false;
-    private int lastUserIndex = 0;
-
-    private String actiontype = "";
-    private double x = 0, y = 0;
+    private boolean roundOngoing = false;
 
     private String myUsername = "UnknownUser";
+    private String chosenDrawer = null;
+    private String selectedWord = "";
 
-    private String chosenDrawer;
-    private String lastDrawer = null;
-    private boolean hasGuessedCorrectly = false;
-    private boolean isDrawer = false;
-
+    // We store words we have used already, so we don't repeat:
+    private Set<String> generatedWords = new HashSet<>();
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        // The FXML is loaded, but we do NOT have remote spaces yet.
-
-        // Basic Canvas Setup
+        // Setup the canvas drawing context
         gc = Canvas.getGraphicsContext2D();
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(2);
 
-        // The random word
-        selectedWord = generateRandomWord();
-
-        // Display the initial word in the UI if needed
-        CurrentWord.setText(selectedWord);
+        // By default, hide the real word from the user
         CurrentWord.setVisible(false);
-        updateHiddenWord();
+        CurrentWordHidden.setVisible(false);
 
-        // Chat & PlayerList read-only
+        // Make Chat and PlayerList read-only
         Chat.setEditable(false);
         PlayerList.setEditable(false);
     }
 
-    private void updateHiddenWord() {
-        CurrentWord2.setText("_".repeat(CurrentWord.getText().length()));
-        CurrentWord2.setVisible(false);
-    }
-
-
     /**
-     * Called by HostGameController or from another controller after it
-     * obtains the RemoteSpaces. We inject them here, then start threads.
+     * Called by another controller (e.g. HostGameController) to inject the remote spaces
+     * and the local username. After that, we start threads, set up the timeline,
+     * and immediately start a round for convenience.
      */
-    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn,
-                          String currentUsername) throws InterruptedException {
-        myUsername = currentUsername;
-        System.out.println(myUsername);
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String username) {
         this.chatSpace = chatSpaceIn;
         this.gameSpace = gameSpaceIn;
         this.drawSpace = drawSpaceIn;
+        this.myUsername = username;
 
-        if (isDrawer) {
-            setUpDrawingEvents();
-        }
-
-        // Initialize the timeline or start the timer logic if needed
-        initializeTimeline();
-
-        // Start background threads for chat, draws, user-list, etc.
+        // Launch our background threads
         startThreads();
 
-        // Optional: Show an updated list of users in "PlayerList"
-        updatePlayerList();
-        startGame();
+        // Create the timeline that decrements 'seconds' every 1s
+        initializeTimeline();
+
+        // ***** Start a round right away *****
+        // This ensures the round begins on initialization
+        generateNewRound();
     }
 
+    // -------------------------------------------------------------------------
+    //                  BACKGROUND THREADS SETUP
+    // -------------------------------------------------------------------------
     private void startThreads() {
-        // Chat messages
-        Thread chatListenerThread = new Thread(this::listenForChatMessages, "ChatListener");
-        chatListenerThread.setDaemon(true);
-        chatListenerThread.start();
+        Thread chatListener = new Thread(this::listenForChatMessages, "ChatListener");
+        chatListener.setDaemon(true);
+        chatListener.start();
 
-        // Drawing
-        Thread drawListenerThread = new Thread(this::listenForDraws, "DrawListener");
-        drawListenerThread.setDaemon(true);
-        drawListenerThread.start();
+        Thread drawListener = new Thread(this::listenForDraws, "DrawListener");
+        drawListener.setDaemon(true);
+        drawListener.start();
 
-        // If you want user changes
-        Thread userListenerThread = new Thread(this::listenForUsers, "UserListener");
-        userListenerThread.setDaemon(true);
-        userListenerThread.start();
+        Thread userListener = new Thread(this::listenForUsers, "UserListener");
+        userListener.setDaemon(true);
+        userListener.start();
 
-        // If you have game logic threads
         Thread gameLogicListener = new Thread(this::listenForGameLogic, "GameLogicListener");
         gameLogicListener.setDaemon(true);
         gameLogicListener.start();
@@ -170,37 +138,10 @@ public class SketchifyController implements Initializable {
         guessListener.start();
     }
 
-    /**
-     * Sets up local mouse event handlers to post "draw" to the drawSpace
-     */
-    private void setUpDrawingEvents() {
-        Canvas.setOnMousePressed(event -> {
-            double px = event.getX();
-            double py = event.getY();
-            try {
-                drawSpace.put("draw", px, py, "start");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                e.printStackTrace();
-            }
-        });
-
-        Canvas.setOnMouseDragged(event -> {
-            double px = event.getX();
-            double py = event.getY();
-            try {
-                drawSpace.put("draw", px, py, "draw");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                e.printStackTrace();
-            }
-        });
-    }
-
-    /**
-     * Timer logic (countdown)
-     */
-    public void initializeTimeline() {
+    // -------------------------------------------------------------------------
+    //                  TIMELINE LOGIC
+    // -------------------------------------------------------------------------
+    private void initializeTimeline() {
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             if (seconds > 0) {
                 seconds--;
@@ -208,15 +149,291 @@ public class SketchifyController implements Initializable {
             } else {
                 Timer.setText("Time's up!");
                 timeline.stop();
-                generateNewRound();  // or do whatever happens at timeout
+                // If time is up, we might start a new round or let the host do so
+                generateNewRound();
             }
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
     }
 
-    // ============ Chat & Draw Listeners ============
+    // -------------------------------------------------------------------------
+    //                  NEW ROUND & DRAWER SELECTION
+    // -------------------------------------------------------------------------
+    /**
+     * Called on initialization or after a correct guess/time out to begin a new round.
+     * We pick a new drawer, pick a new word, and store them in gameSpace for everyone.
+     */
+    private void generateNewRound() {
+        guessedCorrectly = false;
+        roundOngoing = true;
+        timeline.stop();
+        seconds = 61;
 
+        // Clear local canvas
+        Platform.runLater(() -> gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight()));
+
+        try {
+            // 1) remove any old selectedWord tuple
+            Object[] oldWord = gameSpace.getp(
+                    new ActualField("game"),
+                    new ActualField("selectedWord"),
+                    new FormalField(String.class)
+            );
+            // (If oldWord != null, we just ignore it since we want a fresh word)
+
+            // 2) pick random user as new drawer
+            String newDrawer = pickRandomPlayer();
+
+            // 3) generate a random word
+            String newWord = generateRandomWord();
+
+            // 4) put them back
+            gameSpace.put("game", "drawer", newDrawer);
+            gameSpace.put("game", "selectedWord", newWord);
+            gameSpace.put("game", "start");
+            gameSpace.put("game", "timerAction", "start");
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        timeline.playFromStart();
+    }
+
+
+    /**
+     * Picks a random user from the "user" tuples in gameSpace.
+     * If there's only one user, we pick that one by default.
+     */
+    private String pickRandomPlayer() throws InterruptedException {
+        List<Object[]> allUsers = gameSpace.queryAll(
+                new ActualField("user"),
+                new FormalField(String.class)
+        );
+        if (allUsers.isEmpty()) {
+            // no user found
+            return "Unknown";
+        }
+        // if exactly 1 user
+        if (allUsers.size() == 1) {
+            return (String) allUsers.get(0)[1];
+        }
+        // otherwise pick random
+        int idx = new Random().nextInt(allUsers.size());
+        return (String) allUsers.get(idx)[1];
+    }
+
+    /**
+     * Generates a random word that we haven't used before,
+     * storing it in 'generatedWords' to avoid repeats.
+     */
+    private String generateRandomWord() {
+        String randomWord = "";
+        List<String> words = new ArrayList<>();
+
+        // Adjust path if needed, or read from resources
+        try (BufferedReader reader = new BufferedReader(
+                new FileReader("src/main/resources/Sketchify/words.txt")
+        )) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] lineWords = line.split("\\s+");
+                words.addAll(Arrays.asList(lineWords));
+            }
+
+            if (words.isEmpty()) {
+                throw new IllegalStateException("No words found in words.txt!");
+            }
+
+            Random rand = new Random();
+            int attempts = 0;
+            boolean wordFound = false;
+            while (attempts++ < 100 && !wordFound) {
+                String candidate = words.get(rand.nextInt(words.size()));
+                if (!generatedWords.contains(candidate)) {
+                    generatedWords.add(candidate);
+                    randomWord = candidate;
+                    wordFound = true;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return randomWord.isEmpty() ? "EMPTY" : randomWord;
+    }
+
+    // -------------------------------------------------------------------------
+    //                  DRAWER OR GUESSER?
+    // -------------------------------------------------------------------------
+    /**
+     * Called whenever "drawer" or "start" changes in gameSpace,
+     * so each client sees who is the drawer and which word is active.
+     */
+    private void isolateDrawerAndGuesser() {
+        String actualDrawer = getDrawer();
+        String actualWord = getSelectedWord();
+
+        // If I'm the drawer
+        if (myUsername.equalsIgnoreCase(actualDrawer)) {
+            isDrawer = true;
+            CurrentWord.setText(actualWord);
+            CurrentWord.setVisible(true);
+            CurrentWordHidden.setVisible(false);
+            enableCanvasDrawing();
+        } else {
+            // I'm a guesser
+            isDrawer = false;
+            CurrentWord.setVisible(false);
+            // Show underscores
+            CurrentWordHidden.setText("_".repeat(actualWord.length()));
+            CurrentWordHidden.setVisible(true);
+            disableCanvasDrawing();
+        }
+    }
+
+    private String getDrawer() {
+        try {
+            Object[] result = gameSpace.query(
+                    new ActualField("game"),
+                    new ActualField("drawer"),
+                    new FormalField(String.class)
+            );
+            return (String) result[2];
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+            return "Unknown";
+        }
+    }
+
+    private String getSelectedWord() {
+        try {
+            Object[] result = gameSpace.query(
+                    new ActualField("game"),
+                    new ActualField("selectedWord"),
+                    new FormalField(String.class)
+            );
+            return (String) result[2];
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    //                  STROKE COLOR CHANGE + CLEAR
+    // -------------------------------------------------------------------------
+    @FXML
+    public void setStrokeBlue(ActionEvent event) {
+        gc.setStroke(Color.BLUE);
+    }
+    @FXML
+    public void setStrokeBlack(ActionEvent event) {
+        gc.setStroke(Color.BLACK);
+    }
+    @FXML
+    public void setStrokeBrown(ActionEvent event) {
+        gc.setStroke(Color.BROWN);
+    }
+    @FXML
+    public void setStrokeGreen(ActionEvent event) {
+        gc.setStroke(Color.GREEN);
+    }
+    @FXML
+    public void setStrokeRed(ActionEvent event) {
+        gc.setStroke(Color.RED);
+    }
+    @FXML
+    public void setStrokeYellow(ActionEvent event) {
+        gc.setStroke(Color.YELLOW);
+    }
+    @FXML
+    public void setStrokePink(ActionEvent event) {
+        gc.setStroke(Color.PINK);
+    }
+    @FXML
+    public void setStrokeTurquoise(ActionEvent event) {
+        gc.setStroke(Color.TURQUOISE);
+    }
+
+    @FXML
+    public void setClearCanvas(ActionEvent event) {
+        if (isDrawer) {
+            try {
+                drawSpace.put("draw", 0.0, 0.0, "clear");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    //                  CANVAS EVENT HANDLERS
+    // -------------------------------------------------------------------------
+    private void enableCanvasDrawing() {
+        Canvas.setOnMousePressed(event -> {
+            double x = event.getX();
+            double y = event.getY();
+            try {
+                drawSpace.put("draw", x, y, "start");
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                ex.printStackTrace();
+            }
+        });
+
+        Canvas.setOnMouseDragged(event -> {
+            double x = event.getX();
+            double y = event.getY();
+            try {
+                drawSpace.put("draw", x, y, "draw");
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                ex.printStackTrace();
+            }
+        });
+    }
+
+    private void disableCanvasDrawing() {
+        Canvas.setOnMousePressed(null);
+        Canvas.setOnMouseDragged(null);
+    }
+
+    // -------------------------------------------------------------------------
+    //                  GUESS LOGIC
+    // -------------------------------------------------------------------------
+    @FXML
+    public void sendGuess(ActionEvent event) {
+        String guess = guessTextField.getText().trim();
+        if (!guess.isEmpty()) {
+            try {
+                chatSpace.put("message", myUsername + ": " + guess);
+                Chat.appendText("You: " + guess + "\n");
+                guessTextField.clear();
+                checkGuess(guess);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void checkGuess(String guess) {
+        String word = getSelectedWord();
+        if (!guessedCorrectly && guess.equalsIgnoreCase(word)) {
+            guessedCorrectly = true;
+            Platform.runLater(() -> Chat.appendText("Correct guess!\n"));
+            // For simplicity, automatically start a new round now
+            generateNewRound();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    //                  LISTENER METHODS
+    // -------------------------------------------------------------------------
     private void listenForChatMessages() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
@@ -227,19 +444,14 @@ public class SketchifyController implements Initializable {
                 if (messages.size() > lastChatCount) {
                     for (int i = lastChatCount; i < messages.size(); i++) {
                         String text = (String) messages.get(i)[1];
-                        Platform.runLater(() -> {
-                            Chat.appendText(text + "\n");
-                        });
+                        Platform.runLater(() -> Chat.appendText(text + "\n"));
                     }
                     lastChatCount = messages.size();
                 }
-                Thread.sleep(300);
-
+//                Thread.sleep(300);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
@@ -258,7 +470,6 @@ public class SketchifyController implements Initializable {
                         double dx = (double) draws.get(i)[1];
                         double dy = (double) draws.get(i)[2];
                         String action = (String) draws.get(i)[3];
-
                         Platform.runLater(() -> {
                             if ("clear".equals(action)) {
                                 gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
@@ -274,70 +485,7 @@ public class SketchifyController implements Initializable {
                     }
                     lastDrawCount = draws.size();
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    // ============ Button: Send Chat / Guess ============
-
-    @FXML
-    public void sendGuess(ActionEvent event) {
-        String guess = guessTextField.getText().trim();
-        if (!guess.isEmpty()) {
-            try {
-                chatSpace.put("message", "you: " + guess);
-                // Also display locally
-                Chat.appendText("You: " + guess + "\n");
-                guessTextField.clear();
-                checkGuess(guess);
-
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * Checking guess logic
-     */
-    private void checkGuess(String message) {
-        if (message.trim().equalsIgnoreCase(selectedWord) && !guessedCorrectly) {
-            guessedCorrectly = true;
-            Platform.runLater(() -> {
-                Chat.appendText("You guessed the word correctly!\n");
-            });
-        }
-        if (guessedCorrectly) {
-            generateNewRound();
-        }
-    }
-
-    // ============ Other threads for game logic ============
-
-    private void listenForGuesses() {
-        while (!Thread.currentThread().isInterrupted()) {
-            try {
-                List<Object[]> chatMessages = chatSpace.queryAll(
-                        new ActualField("message"),
-                        new FormalField(String.class)
-                );
-                if (!chatMessages.isEmpty()) {
-                    String guess = (String) chatMessages.get(0)[1];
-                    // If the guess hasn't been marked correct yet, check it
-                    if (!hasGuessedCorrectly) {
-                        checkGuess(guess);
-                        Thread.sleep(10);
-                        hasGuessedCorrectly = true;
-                    }
-                }
-                Thread.sleep(500);
-
+                Thread.sleep(3);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -345,23 +493,25 @@ public class SketchifyController implements Initializable {
         }
     }
 
-    private void listenForTimerAction() {
+    private void listenForUsers() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                List<Object[]> gameStatus = gameSpace.queryAll(
-                        new ActualField("game"),
-                        new ActualField("timerAction"),
+                List<Object[]> users = gameSpace.queryAll(
+                        new ActualField("user"),
                         new FormalField(String.class)
                 );
-                if (!gameStatus.isEmpty()) {
-                    String timerAction = (String) gameStatus.get(0)[1];
-                    if ("stop".equals(timerAction)) {
-                        timeline.stop();
-                        seconds = 61;
+                if (users.size() > lastUserCount) {
+                    lastUserCount = users.size();
+                    Set<String> names = new HashSet<>();
+                    for (Object[] arr : users) {
+                        String name = (String) arr[1];
+                        names.add(name);
                     }
+                    Platform.runLater(() -> {
+                        PlayerList.setText(String.join("\n", names));
+                    });
                 }
                 Thread.sleep(300);
-
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -377,319 +527,69 @@ public class SketchifyController implements Initializable {
                         new FormalField(String.class)
                 );
                 if (!statuses.isEmpty()) {
-                    // e.g. ("game", "start"), ("game", "drawer"), etc.
-                    String status = (String) statuses.get(0)[1];
-
-                    if ("start".equals(status)) {
-                        Platform.runLater(this::startGame);
-                    }
-                    if ("drawer".equals(status)) {
-                        String newDrawer = getDrawer();
-                        if (lastDrawer == null || !newDrawer.equals(lastDrawer)) {
-                            lastDrawer = newDrawer;
-                            Platform.runLater(() -> {
-                                Chat.appendText("[System] Drawer selected: " + newDrawer + "\n");
-                            });
-                        }
+                    Object[] lastOne = statuses.get(statuses.size()-1);
+                    String status = (String) lastOne[1];
+                    // If "start" or "drawer" changes
+                    if ("start".equals(status) || "drawer".equals(status)) {
+                        Platform.runLater(this::isolateDrawerAndGuesser);
                     }
                 }
                 Thread.sleep(500);
-
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
 
-    // ============ Round Flow Methods ============
-
-    private void startGame() {
-        // Example of setting up a new round or choosing a drawer
-        try {
-            chooseRandomPlayer();
-            gameSpace.put("game", "drawer", chosenDrawer);
-            gameSpace.put("game", "start");
-            gameSpace.put("game", "timerAction", "start");
-            if (!drawerAppended) {
-                Chat.appendText("Drawer selected " + getDrawer() + "\n");
-                drawerAppended = true;
-            }
-            isolateDrawerAndGuesser();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void isolateDrawerAndGuesser() {
-        syncCurrentWordFromSpace();
-
-        String actualDrawer = getDrawer();  // e.g. read from gameSpace
-        if (myUsername.equalsIgnoreCase(actualDrawer)) {
-            isDrawer = true;
-            CurrentWord.setText(selectedWord);
-            CurrentWord.setVisible(true);
-            enableCanvasDrawing();
-        } else {
-            isDrawer = false;
-            CurrentWord.setVisible(false);
-            updateHiddenWord();
-            CurrentWord2.setVisible(true);
-            disableCanvasDrawing();
-        }
-    }
-
-    private void chooseRandomPlayer() {
-        try {
-            List<Object[]> allUsers = gameSpace.queryAll(
-                    new ActualField("user"),
-                    new FormalField(String.class)
-            );
-            if (allUsers.isEmpty()) {
-                Platform.runLater(() -> Chat.appendText("[System] No users found, cannot start.\n"));
-                return;
-            }
-            int idx = new Random().nextInt(allUsers.size());
-            chosenDrawer = (String) allUsers.get(idx)[1];
-            gameSpace.put("game", "drawer", chosenDrawer);
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            e.printStackTrace();
-        }
-    }
-
-    private String getDrawer() {
-        try {
-            Object[] drawerEntry = gameSpace.query(
-                    new ActualField("game"),
-                    new ActualField("drawer"),
-                    new FormalField(String.class)
-            );
-            return (String) drawerEntry[2];
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private void generateNewRound() {
-        // Example method if the timer runs out or guess is correct
-        gc.setStroke(Color.BLACK);
-        isWordAppended = false;
-        hasGuessedCorrectly = false;
-        drawerAppended = false;
-        isGuessCorrect = false;
-        isGuessed = false;
-        gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
-
-        try {
-            chooseRandomPlayer();
-
-            String newWord = generateRandomWord();
-            gameSpace.put("game", "selectedWord", newWord);
-
-            gameSpace.put("game", "drawer", chosenDrawer);
-            gameSpace.put("game", "timerAction", "start");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-
-        // Set word to a new generated word.
-        CurrentWord.setText(generateRandomWord());
-        updatePlayerList();
-
-        seconds = 61;
-        timeline.playFromStart();
-        timeline.play();
-
-        isolateDrawerAndGuesser();
-        lastDrawer = null;
-        updateHiddenWord();
-    }
-
-    private void syncCurrentWordFromSpace() {
-        try {
-            Object[] result = gameSpace.query(
-                    new ActualField("game"),
-                    new ActualField("selectedWord"),
-                    new FormalField(String.class)
-            );
-            this.selectedWord = (String) result[2];
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            e.printStackTrace();
-        }
-    }
-
-    // ============ Utility: random word generation ============
-
-    public String generateRandomWord() {
-        String randomWord = "";
-        List<String> words = new ArrayList<>();
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(
-                "src/main/resources/Sketchify/words.txt"
-        ))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] wordsLine = line.split("\\s+");
-                words.addAll(Arrays.asList(wordsLine));
-            }
-            if (words.isEmpty()) {
-                throw new IllegalStateException("No words found in the file.");
-            }
-
-            Random rand = new Random();
-            int attempts = 0;
-            int maxAttempts = 100;
-            boolean wordGenerated = false;
-
-            do {
-                if (attempts++ > maxAttempts) {
-                    System.out.println("Max attempts reached, stopping word generation.");
-                    break;
-                }
-                randomWord = words.get(rand.nextInt(words.size()));
-                if (!generatedWords.contains(randomWord)) {
-                    generatedWords.add(randomWord);
-                    wordGenerated = true;
-                }
-            } while (!wordGenerated);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return randomWord;
-    }
-
-    // ============ Show the user list in PlayerList TextArea ============
-
-    private void updatePlayerList() {
-        try {
-            List<Object[]> users = gameSpace.queryAll(
-                    new ActualField("user"),
-                    new FormalField(String.class)
-            );
-            StringBuilder sb = new StringBuilder();
-            for (Object[] arr : users) {
-                String name = (String) arr[1];
-                sb.append(name).append(": ").append(points).append("\n");
-            }
-            // Update the UI
-            Platform.runLater(() -> {
-                PlayerList.setText(sb.toString());
-            });
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            e.printStackTrace();
-        }
-    }
-
-    private void listenForUsers() {
+    private void listenForTimerAction() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                List<Object[]> users = gameSpace.queryAll(
-                        new ActualField("user"),
+                List<Object[]> timerActions = gameSpace.queryAll(
+                        new ActualField("game"),
+                        new ActualField("timerAction"),
                         new FormalField(String.class)
                 );
-                if (users.size() > lastUserCount) {
-                    Set<String> allNames = new HashSet<>();
-                    for (Object[] arr : users) {
-                        String name = (String) arr[1];
-                        allNames.add(name);
+                if (!timerActions.isEmpty()) {
+                    for (Object[] arr : timerActions) {
+                        String action = (String) arr[2];
+                        if ("stop".equals(action)) {
+                            timeline.stop();
+                            seconds = 61;
+                        }
                     }
-                    Platform.runLater(() -> {
-                        PlayerList.setText(String.join("\n", allNames));
-                    });
-                    lastUserCount = users.size();
                 }
                 Thread.sleep(300);
-
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
 
-    private void enableCanvasDrawing() {
-        Canvas.setOnMousePressed(event -> {
-            double px = event.getX();
-            double py = event.getY();
+    private void listenForGuesses() {
+        while (!Thread.currentThread().isInterrupted()) {
             try {
-                drawSpace.put("draw", px, py, "start");
+                List<Object[]> chatMessages = chatSpace.queryAll(
+                        new ActualField("message"),
+                        new FormalField(String.class)
+                );
+                if (chatMessages.size() > lastChatCount) {
+                    for (int i = lastChatCount; i < chatMessages.size(); i++) {
+                        String msg = (String) chatMessages.get(i)[1];
+                        // parse guess from "username: guess"
+                        String guess = msg.substring(msg.indexOf(":") + 1).trim();
+                        if (!guessedCorrectly) {
+                            checkGuess(guess);
+                        }
+                    }
+                    lastChatCount = chatMessages.size();
+                }
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                e.printStackTrace();
-            }
-        });
-
-        Canvas.setOnMouseDragged(event -> {
-            double px = event.getX();
-            double py = event.getY();
-            try {
-                drawSpace.put("draw", px, py, "draw");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                e.printStackTrace();
-            }
-        });
-    }
-
-    private void disableCanvasDrawing() {
-        Canvas.setOnMousePressed(null);
-        Canvas.setOnMouseDragged(null);
-    }
-
-    @FXML
-    public void setClearCanvas(ActionEvent event) {
-        if (isDrawer) {
-            // Only the drawer can broadcast a clear
-            try {
-                drawSpace.put("draw", 0.0, 0.0, "clear");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
+                break;
             }
         }
-    }
-
-    public void setStrokeBlue(ActionEvent event) {
-        gc.setStroke(Color.BLUE);
-    }
-
-    public void setStrokeBlack(ActionEvent event) {
-        gc.setStroke(Color.BLACK);
-    }
-
-    public void setStrokeBrown(ActionEvent event) {
-        gc.setStroke(Color.BROWN);
-    }
-
-    public void setStrokeGreen(ActionEvent event) {
-        gc.setStroke(Color.GREEN);
-    }
-
-    public void setStrokeRed(ActionEvent event) {
-        gc.setStroke(Color.RED);
-    }
-
-    public void setStrokeYellow(ActionEvent event) {
-        gc.setStroke(Color.YELLOW);
-    }
-
-    public void setStrokePink(ActionEvent event) {
-        gc.setStroke(Color.PINK);
-    }
-
-    public void setStrokeTurquoise(ActionEvent event) {
-        gc.setStroke(Color.TURQUOISE);
     }
 }

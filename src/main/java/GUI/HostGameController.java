@@ -52,12 +52,18 @@ public class HostGameController {
         stage.show();
     }
 
-    public void GoBack(ActionEvent e) throws IOException {
-        SceneController controller = new SceneController();
-        String title = "Home page";
-        String css = "HomePageStyle.css";
-        String fxml = "home-page.fxml";
-        controller.switchToScene(e, fxml, css, title);
+    public void GoBack(ActionEvent event) throws IOException, InterruptedException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("home-page.fxml"));
+        root = loader.load();
+
+        HomepageController homepageController = loader.getController();
+        homepageController.displayName(gameSpace);
+        homepageController.setSpaces(chatSpace, gameSpace, drawSpace, currentUser);
+
+        stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
+        scene = new Scene(root);
+        stage.setScene(scene);
+        stage.show();
     }
 
     public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String myUsername)
@@ -67,12 +73,12 @@ public class HostGameController {
         chatSpace = chatSpaceIn;
         gameSpace = gameSpaceIn;
         drawSpace = drawSpaceIn;
-        System.out.println("Host game chatSpace contain "
-                + chatSpace.queryAll().toString()
-                + " and gameSpace "
-                + gameSpace.queryAll(new ActualField("user"), new FormalField(String.class)).toString()
-                + " and drawSpace "
-                + drawSpace.queryAll().toString());
+//        System.out.println("Host game chatSpace contain "
+//                + chatSpace.queryAll().toString()
+//                + " and gameSpace "
+//                + gameSpace.queryAll(new ActualField("user"), new FormalField(String.class)).toString()
+//                + " and drawSpace "
+//                + drawSpace.queryAll().toString());
 
         updateLobbyList();
     }
