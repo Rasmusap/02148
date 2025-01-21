@@ -338,13 +338,23 @@ public class App extends Application {
 
     private boolean isGuessCorrect = false;
     private void checkGuess(String message) {
+        try {
+            if (myUsername.equalsIgnoreCase(getDrawer())) {
+                chatSpace.put("message", "[System] Type " + "new round" +  " to start a new round!");
+            } else {
+                chatSpace.put("message", "[System] Wait for drawer to start a new round!");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
         if (message.trim().equalsIgnoreCase(selectedWord) && !isGuessCorrect) {
             isGuessed = true;
             isGuessCorrect = true;
 
             try {
                 chatSpace.put("message", "[System] Correct guess: " + selectedWord + " was guessed by " + myUsername);
-                chatSpace.put("message", "[System] Type " + "new round" +  " to start a new round");
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -371,9 +381,6 @@ public class App extends Application {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        chatInput.setDisable(false);
-        sendBtn.setDisable(false);
 
         Platform.runLater(() -> {
             wordlabel.setText(selectedWord);
@@ -411,7 +418,7 @@ public class App extends Application {
         if (!text.isEmpty()) {
             try {
                 chatSpace.put("message", "[" + myUsername + "]: " + text);
-                if (text.equalsIgnoreCase(selectedWord) || text.equalsIgnoreCase("new round")) {
+                if (text.equalsIgnoreCase(selectedWord) || (text.equalsIgnoreCase("new round") && myUsername.equalsIgnoreCase(getDrawer()))) {
                     checkGuess(text);
                 }
             } catch (InterruptedException e) {
