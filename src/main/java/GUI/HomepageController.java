@@ -72,11 +72,11 @@ public class HomepageController {
     }
 
     public void displayName(RemoteSpace gameSpace) {
+        if (myRole.equals("Client")) {
+            HostGameButton.setVisible(false);
+        }
         try {
             nameLabel.setText("Welcome " + gameSpace.query(new ActualField("user"), new FormalField(String.class))[1].toString());
-            if (myRole.equals("Client")) {
-                HostGameButton.setVisible(false);
-            }
         } catch (RuntimeException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -122,19 +122,21 @@ public class HomepageController {
 
     /** Moves this client to 'sketchify-page.fxml' */
     private void switchToSketchify() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("sketchify-page.fxml"));
-            Parent root = loader.load();
+        if (myRole.equalsIgnoreCase("Client")) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("sketchify-page.fxml"));
+                Parent root = loader.load();
 
-            SketchifyController controller = loader.getController();
-            controller.setSpaces(chatSpace, gameSpace, drawSpace, currentUserName, myRole);
+                SketchifyController controller = loader.getController();
+                controller.setSpaces(chatSpace, gameSpace, drawSpace, currentUserName, myRole);
 
-            stage = (Stage) ExitButton.getScene().getWindow(); // or any node from the scene
-            Scene scene = new Scene(root);
-            stage.setScene(scene);
-            stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
+                stage = (Stage) ExitButton.getScene().getWindow(); // or any node from the scene
+                Scene scene = new Scene(root);
+                stage.setScene(scene);
+                stage.show();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

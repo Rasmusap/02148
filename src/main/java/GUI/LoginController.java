@@ -80,8 +80,8 @@ public class LoginController {
             e.printStackTrace();
         }
         homepageController.setMyRole(myRole);
-        homepageController.displayName(gameSpace);
         homepageController.setSpaces(chatSpace, gameSpace, drawSpace, myUsername, myRole);
+        homepageController.displayName(gameSpace);
 
         stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
         scene = new Scene(root);
