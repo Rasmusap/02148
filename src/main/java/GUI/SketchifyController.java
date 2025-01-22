@@ -93,7 +93,7 @@ public class SketchifyController implements Initializable {
      * and the local username. After that, we start threads, set up the timeline,
      * and immediately start a round for convenience.
      */
-    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String username, String role) {
+    public void setSpaces(RemoteSpace chatSpaceIn, RemoteSpace gameSpaceIn, RemoteSpace drawSpaceIn, String username, String role) throws InterruptedException {
         this.myRole = role;
         this.chatSpace = chatSpaceIn;
         this.gameSpace = gameSpaceIn;
@@ -152,7 +152,11 @@ public class SketchifyController implements Initializable {
                 Timer.setText("Time's up!");
                 timeline.stop();
                 // If time is up, we might start a new round or let the host do so
-                generateNewRound();
+                try {
+                    generateNewRound();
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -166,7 +170,7 @@ public class SketchifyController implements Initializable {
      * Called on initialization or after a correct guess/time out to begin a new round.
      * We pick a new drawer, pick a new word, and store them in gameSpace for everyone.
      */
-    private void generateNewRound() {
+    private void generateNewRound() throws InterruptedException {
         guessedCorrectly = false;
         roundOngoing = true;
         timeline.stop();
@@ -294,9 +298,10 @@ public class SketchifyController implements Initializable {
             isDrawer = false;
             CurrentWord.setVisible(false);
             // Show underscores
-            CurrentWordHidden.setText("_ ".repeat(actualWord.length()));
+            CurrentWordHidden.setText("__ ".repeat(actualWord.length()));
             CurrentWordHidden.setVisible(true);
             disableCanvasDrawing();
+            guessTextField.setEditable(true);
         }
     }
 
@@ -367,7 +372,7 @@ public class SketchifyController implements Initializable {
     }
 
     @FXML
-    public void setClearCanvas(ActionEvent event) {
+    public void setClearCanvas(ActionEvent event) throws InterruptedException {
         if (isDrawer) {
             try {
                 drawSpace.put("draw", 0.0, 0.0, "clear");
@@ -429,7 +434,7 @@ public class SketchifyController implements Initializable {
         }
     }
 
-    private void checkGuess(String guess) {
+    private void checkGuess(String guess) throws InterruptedException {
         String word = getSelectedWord();
         if (!guessedCorrectly && guess.equalsIgnoreCase(word)) {
             guessedCorrectly = true;
@@ -456,7 +461,7 @@ public class SketchifyController implements Initializable {
                     }
                     lastChatCount = messages.size();
                 }
-//                Thread.sleep(300);
+                Thread.sleep(300);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -467,33 +472,31 @@ public class SketchifyController implements Initializable {
     private void listenForDraws() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                List<Object[]> draws = drawSpace.queryAll(
+                // remove new draws from the space
+                List<Object[]> newDraws = drawSpace.getAll(
                         new ActualField("draw"),
                         new FormalField(Double.class),
                         new FormalField(Double.class),
                         new FormalField(String.class)
                 );
-                if (draws.size() > lastDrawCount) {
-                    for (int i = lastDrawCount; i < draws.size(); i++) {
-                        double dx = (double) draws.get(i)[1];
-                        double dy = (double) draws.get(i)[2];
-                        String action = (String) draws.get(i)[3];
-                        Platform.runLater(() -> {
-                            if ("clear".equals(action)) {
-                                gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
-                            } else if ("start".equals(action)) {
-                                gc.beginPath();
-                                gc.moveTo(dx, dy);
-                                gc.stroke();
-                            } else if ("draw".equals(action)) {
-                                gc.lineTo(dx, dy);
-                                gc.stroke();
-                            }
-                        });
-                    }
-                    lastDrawCount = draws.size();
+                for (Object[] tuple : newDraws) {
+                    double dx = (double) tuple[1];
+                    double dy = (double) tuple[2];
+                    String action = (String) tuple[3];
+                    Platform.runLater(() -> {
+                        if ("clear".equals(action)) {
+                            gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
+                        } else if ("start".equals(action)) {
+                            gc.beginPath();
+                            gc.moveTo(dx, dy);
+                            gc.stroke();
+                        } else if ("draw".equals(action)) {
+                            gc.lineTo(dx, dy);
+                            gc.stroke();
+                        }
+                    });
                 }
-                Thread.sleep(3);
+                Thread.sleep(40);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -519,7 +522,7 @@ public class SketchifyController implements Initializable {
                         PlayerList.setText(String.join("\n", names));
                     });
                 }
-                Thread.sleep(3);
+                Thread.sleep(300);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -542,7 +545,7 @@ public class SketchifyController implements Initializable {
                         Platform.runLater(this::isolateDrawerAndGuesser);
                     }
                 }
-                Thread.sleep(50);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -567,7 +570,7 @@ public class SketchifyController implements Initializable {
                         }
                     }
                 }
-                Thread.sleep(30);
+                Thread.sleep(300);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -578,22 +581,22 @@ public class SketchifyController implements Initializable {
     private void listenForGuesses() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                List<Object[]> chatMessages = chatSpace.queryAll(
+                // remove new chat messages from the space
+                List<Object[]> newMessages = chatSpace.getAll(
                         new ActualField("message"),
                         new FormalField(String.class)
                 );
-                if (chatMessages.size() > lastChatCount) {
-                    for (int i = lastChatCount; i < chatMessages.size(); i++) {
-                        String msg = (String) chatMessages.get(i)[1];
-                        // parse guess from "username: guess"
-                        String guess = msg.substring(msg.indexOf(":") + 1).trim();
-                        if (!guessedCorrectly) {
-                            checkGuess(guess);
-                        }
+                for (Object[] tuple : newMessages) {
+                    String msg = (String) tuple[1];
+                    Platform.runLater(() -> Chat.appendText(msg + "\n"));
+
+                    // parse guess from "username: guess"
+                    String guess = msg.substring(msg.indexOf(":") + 1).trim();
+                    if (!guessedCorrectly) {
+                        checkGuess(guess);
                     }
-                    lastChatCount = chatMessages.size();
                 }
-                Thread.sleep(50);
+                Thread.sleep(200);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;

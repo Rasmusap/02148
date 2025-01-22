@@ -145,6 +145,8 @@ public class HomepageController {
                 stage.show();
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
     }
