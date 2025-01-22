@@ -105,8 +105,7 @@ public class SketchifyController implements Initializable {
         startThreads();
 
         // Create the timeline that decrements 'seconds' every 1s
-        startHostTimer();
-        listenForGlobalTimer();
+        initializeTimeline();
 
         // ***** Start a round right away *****
         // This ensures the round begins on initialization
@@ -145,53 +144,21 @@ public class SketchifyController implements Initializable {
     // -------------------------------------------------------------------------
     //                  TIMELINE LOGIC
     // -------------------------------------------------------------------------
-//    private void initializeTimeline() {
-//        if (myRole.equalsIgnoreCase("Host")) {
-//            timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-//                if (seconds > 0) {
-//                    seconds--;
-//                    Timer.setText("Time: " + seconds + " s");
-//                } else {
-//                    Timer.setText("Time's up!");
-//                    timeline.stop();
-//                    // If time is up, we might start a new round or let the host do so
-//                    try {
-//                        generateNewRound();
-//                    } catch (InterruptedException ex) {
-//                        throw new RuntimeException(ex);
-//                    }
-//                }
-//            }));
-//            timeline.setCycleCount(Timeline.INDEFINITE);
-//            timeline.play();
-//        }
-//    }
-
-    private void startHostTimer() {
+    private void initializeTimeline() {
         if (myRole.equalsIgnoreCase("Host")) {
-            final int initialSeconds = 60;
-            seconds = initialSeconds;
-
-            // Example: a Timeline to decrement 'seconds' from 60 down to 0
             timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
                 if (seconds > 0) {
                     seconds--;
                     Timer.setText("Time: " + seconds + " s");
-                    // Put the new timer value into the space
-                    try {
-                        // Remove any old timer value if you want
-                        gameSpace.getp(new ActualField("game"), new ActualField("timer"), new FormalField(Integer.class));
-
-                        // Insert the updated timer
-                        gameSpace.put("game", "timer", seconds);
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                        ex.printStackTrace();
-                    }
                 } else {
+                    Timer.setText("Time's up!");
                     timeline.stop();
-                    // Possibly start a new round or do something else
-                    // ...
+                    // If time is up, we might start a new round or let the host do so
+                    try {
+                        generateNewRound();
+                    } catch (InterruptedException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 }
             }));
             timeline.setCycleCount(Timeline.INDEFINITE);
@@ -199,35 +166,6 @@ public class SketchifyController implements Initializable {
         }
     }
 
-    private void listenForGlobalTimer() {
-        if (myRole.equalsIgnoreCase("Client")) {
-            Thread timerThread = new Thread(() -> {
-                while (!Thread.currentThread().isInterrupted()) {
-                    try {
-                        // Wait for the latest ("game","timer", int) tuple
-                        // Possibly we do a blocking `query` that re-checks each second
-                        // Or we can do getp(...) in a loop for updates.
-
-                        Object[] t = gameSpace.query(new ActualField("game"), new ActualField("timer"), new FormalField(Integer.class));
-                        int serverSeconds = (int) t[2];
-
-                        Platform.runLater(() -> {
-                            Timer.setText("Time: " + serverSeconds + " s");
-                        });
-
-                        // Sleep a bit or do some blocking approach repeatedly
-                        Thread.sleep(500);
-
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-            }, "GlobalTimerListener");
-            timerThread.setDaemon(true);
-            timerThread.start();
-        }
-    }
 
     // -------------------------------------------------------------------------
     //                  NEW ROUND & DRAWER SELECTION
