@@ -13,6 +13,7 @@ import javafx.stage.Stage;
 import org.jspace.*;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class HomepageController {
     private String myRole;
@@ -92,7 +93,9 @@ public class HomepageController {
         chatSpace = chatSpaceIn;
         gameSpace = gameSpaceIn;
         drawSpace = drawSpaceIn;
-
+        if (Objects.equals(myRole, "Client")) {
+            HostGameButton.setVisible(false);
+        }
         startListeningForStartAll();
     }
     private void startListeningForStartAll() {

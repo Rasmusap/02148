@@ -204,8 +204,8 @@ public class SketchifyController implements Initializable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
         timeline.playFromStart();
+        isolateDrawerAndGuesser();
     }
 
 
@@ -519,7 +519,7 @@ public class SketchifyController implements Initializable {
                         PlayerList.setText(String.join("\n", names));
                     });
                 }
-                Thread.sleep(300);
+                Thread.sleep(3);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -542,7 +542,7 @@ public class SketchifyController implements Initializable {
                         Platform.runLater(this::isolateDrawerAndGuesser);
                     }
                 }
-                Thread.sleep(500);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -567,7 +567,7 @@ public class SketchifyController implements Initializable {
                         }
                     }
                 }
-                Thread.sleep(300);
+                Thread.sleep(30);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -593,7 +593,7 @@ public class SketchifyController implements Initializable {
                     }
                     lastChatCount = chatMessages.size();
                 }
-                Thread.sleep(500);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
