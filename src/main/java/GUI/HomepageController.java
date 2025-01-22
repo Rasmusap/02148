@@ -95,7 +95,7 @@ public class HomepageController {
         chatSpace = chatSpaceIn;
         gameSpace = gameSpaceIn;
         drawSpace = drawSpaceIn;
-        if (Objects.equals(myRole, "Client")) {
+        if (myRole.equalsIgnoreCase("Client")) {
             HostGameButton.setVisible(false);
         } else {
             JoinGameButton.setVisible(false);

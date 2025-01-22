@@ -13,7 +13,7 @@ import java.net.ConnectException;
 import java.util.Objects;
 
 public class LoginPage extends Application {
-    private String role = "";
+    public static String role = "";
 
     public static void main(String[] args) {
         launch(args);
@@ -24,6 +24,7 @@ public class LoginPage extends Application {
         // 1. Check if there's already a server by attempting a client connection
         String testURI = "tcp://192.168.8.69:8753/chat?keep";
         boolean serverRunning = isServerRunning(testURI);
+        role = "Client";
 
         // 2. If no server is running, start a new one
         if (!serverRunning) {
@@ -31,9 +32,7 @@ public class LoginPage extends Application {
             server.startServer();
             System.out.println("[LoginPage] Started a new ChatServer on port 8753.");
             role = "Host";
-            System.out.println(role);
         } else {
-            System.out.println("[LoginPage] Server already running. Skipping new ChatServer startup.");
             role = "Client";
         }
 
