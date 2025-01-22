@@ -10,17 +10,7 @@
    <children>
       <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1080.0" stylesheets="@JoinGameStyle.css">
          <children>
-            <Button fx:id="GoBack" layoutX="680.0" layoutY="402.0" mnemonicParsing="false" onAction="#GoBack" prefHeight="75.0" prefWidth="300.0" text="Go back" textFill="WHITE">
-               <font>
-                  <Font size="25.0" />
-               </font>
-            </Button>
-            <Button fx:id="JoinDirectlyButton" layoutX="680.0" layoutY="296.0" mnemonicParsing="false" onAction="#joinDirectly" prefHeight="75.0" prefWidth="300.0" text="Join Directly" textFill="WHITE">
-               <font>
-                  <Font size="25.0" />
-               </font>
-            </Button>
-            <Button fx:id="FindGame" layoutX="680.0" layoutY="189.0" mnemonicParsing="false" onAction="#findGame" prefHeight="75.0" prefWidth="300.0" text="Find Game" textFill="#fcfcfc">
+            <Button fx:id="GoBack" layoutX="679.0" layoutY="286.0" mnemonicParsing="false" onAction="#GoBack" prefHeight="75.0" prefWidth="300.0" text="Go back" textFill="WHITE">
                <font>
                   <Font size="25.0" />
                </font>

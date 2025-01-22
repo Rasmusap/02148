@@ -17,17 +17,12 @@
             </Text>
          </children>
       </AnchorPane>
-      <Button fx:id="GoBack" layoutX="656.0" layoutY="464.0" mnemonicParsing="false" onAction="#GoBack" prefHeight="75.0" prefWidth="300.0" text="Go back" textFill="WHITE">
+      <Button fx:id="GoBack" layoutX="656.0" layoutY="285.0" mnemonicParsing="false" onAction="#GoBack" prefHeight="75.0" prefWidth="300.0" text="Go back" textFill="WHITE">
          <font>
             <Font size="25.0" />
          </font>
       </Button>
-      <Button fx:id="StartGameButton" layoutX="656.0" layoutY="358.0" mnemonicParsing="false" onAction="#StartGame" prefHeight="75.0" prefWidth="300.0" text="Start Game" textFill="WHITE">
-         <font>
-            <Font size="25.0" />
-         </font>
-      </Button>
-      <Button fx:id="InvitePlayersButton" layoutX="656.0" layoutY="251.0" mnemonicParsing="false" onAction="#InvitePlayers" prefHeight="75.0" prefWidth="300.0" text="Invite Players" textFill="#fcfcfc">
+      <Button fx:id="StartGameButton" layoutX="656.0" layoutY="184.0" mnemonicParsing="false" onAction="#StartGame" prefHeight="75.0" prefWidth="300.0" text="Start Game" textFill="WHITE">
          <font>
             <Font size="25.0" />
          </font>

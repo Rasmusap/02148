@@ -13,13 +13,6 @@
     -fx-font-family: "Lucida Console";
 }
 
-#JoinDirectlyButton:hover {
-    -fx-background-color: grey;
-}
-
-#FindGame:hover {
-    -fx-background-color: grey;
-}
 
 #GoBack:hover {
     -fx-background-color: grey;

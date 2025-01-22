@@ -12,9 +12,6 @@
     -fx-font-weight: bold;
     -fx-font-family: "Lucida Console";
 }
-#InvitePlayersButton:hover {
-    -fx-background-color: grey;
-}
 
 #StartGameButton:hover {
     -fx-background-color: grey;

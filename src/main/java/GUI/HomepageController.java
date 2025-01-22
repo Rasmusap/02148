@@ -33,6 +33,8 @@ public class HomepageController {
     public Button ExitButton;
     @FXML
     private Button HostGameButton;
+    @FXML
+    private Button JoinGameButton;
     public void HostGame(ActionEvent event) throws IOException, InterruptedException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("host-game.fxml"));
         Parent root = loader.load();
@@ -95,35 +97,39 @@ public class HomepageController {
         drawSpace = drawSpaceIn;
         if (Objects.equals(myRole, "Client")) {
             HostGameButton.setVisible(false);
+        } else {
+            JoinGameButton.setVisible(false);
         }
         startListeningForStartAll();
     }
     private void startListeningForStartAll() {
-        Thread t = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    // We do a blocking read for ("game","startAll")
-                    gameSpace.query(new ActualField("game"), new ActualField("startAll"));
+        if (Objects.equals(myRole, "Client")) {
+            Thread t = new Thread(() -> {
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        // We do a blocking read for ("game","startAll")
+                        gameSpace.query(new ActualField("game"), new ActualField("startAll"));
 
-                    // If we get here, the host has signaled "startAll".
-                    System.out.println("[HomePageController] Detected (\"game\",\"startAll\"). Loading Sketchify...");
+                        // If we get here, the host has signaled "startAll".
+                        System.out.println("[HomePageController] Detected (\"game\",\"startAll\"). Loading Sketchify...");
 
-                    // Switch to Sketchify UI on JavaFX thread
-                    Platform.runLater(() -> {
-                        switchToSketchify();
-                    });
-                    break; // or keep listening if you want multiple re-joins
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+                        // Switch to Sketchify UI on JavaFX thread
+                        Platform.runLater(() -> {
+                            switchToSketchify();
+                        });
+                        break; // or keep listening if you want multiple re-joins
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
-            }
-        }, "WaitForStartAll");
-        t.setDaemon(true);
-        t.start();
+
+            }, "WaitForStartAll");
+            t.setDaemon(true);
+            t.start();
+        }
     }
 
-    /** Moves this client to 'sketchify-page.fxml' */
     private void switchToSketchify() {
         if (myRole.equalsIgnoreCase("Client")) {
             try {

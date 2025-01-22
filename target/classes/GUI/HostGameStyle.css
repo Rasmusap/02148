@@ -16,9 +16,6 @@
     -fx-background-color: grey;
 }
 
-#StartGameButton:hover {
-    -fx-background-color: grey;
-}
 
 #GoBack:hover {
     -fx-background-color: grey;
