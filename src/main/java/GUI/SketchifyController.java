@@ -48,6 +48,7 @@ public class SketchifyController implements Initializable {
 
     // ---- Remote Spaces ----
     private RemoteSpace drawSpace;
+    private int currentRoundID = 0;
     private RemoteSpace chatSpace;
     private RemoteSpace gameSpace;
 
@@ -175,6 +176,8 @@ public class SketchifyController implements Initializable {
         roundOngoing = true;
         timeline.stop();
         seconds = 61;
+
+        currentRoundID++;
 
         // Clear local canvas
         Platform.runLater(() -> gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight()));
@@ -376,6 +379,7 @@ public class SketchifyController implements Initializable {
         if (isDrawer) {
             try {
                 drawSpace.put("draw", 0.0, 0.0, "clear");
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 Thread.currentThread().interrupt();
