@@ -1,6 +1,9 @@
 package GUI;
 
-import Sketchify.ChatServer;
+import java.io.IOException;
+
+import org.jspace.RemoteSpace;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -13,12 +16,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import org.jspace.*;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.Scanner;
 
 public class LoginController {
     RemoteSpace chatSpace;
@@ -60,9 +57,9 @@ public class LoginController {
 
 
         //Parent root loaded from FXML file
-        String chatURI = "tcp://192.168.8.69:8753/chat?keep";
-        String serverURI = "tcp://192.168.8.69:8753/draw?keep";
-        String gameURI = "tcp://192.168.8.69:8753/game?keep";
+        String chatURI = "tcp://192.168.0.247:8753/chat?keep";
+        String serverURI = "tcp://192.168.0.247:8753/draw?keep";
+        String gameURI = "tcp://192.168.0.247:8753/game?keep";
         try {
             chatSpace = new RemoteSpace(chatURI);
             drawSpace = new RemoteSpace(serverURI);

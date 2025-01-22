@@ -1,5 +1,13 @@
 package GUI;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+
+import org.jspace.ActualField;
+import org.jspace.FormalField;
+import org.jspace.RemoteSpace;
+
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -9,13 +17,6 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
-import org.jspace.ActualField;
-import org.jspace.FormalField;
-import org.jspace.RemoteSpace;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
 
 public class JoinGameController {
     @FXML

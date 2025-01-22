@@ -1,6 +1,12 @@
 package GUI;
 
-import javafx.application.Platform;
+import java.io.IOException;
+import java.util.List;
+
+import org.jspace.ActualField;
+import org.jspace.FormalField;
+import org.jspace.RemoteSpace;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -10,14 +16,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
-
-import java.util.List;
-import java.util.Objects;
-import java.util.Scanner;
-
-import org.jspace.*;
-
-import java.io.IOException;
 
 public class HostGameController {
     private String currentUser;

@@ -1,5 +1,21 @@
 package GUI;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.ResourceBundle;
+import java.util.Set;
+
+import org.jspace.ActualField;
+import org.jspace.FormalField;
+import org.jspace.RemoteSpace;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -14,15 +30,6 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
-import org.jspace.ActualField;
-import org.jspace.FormalField;
-import org.jspace.RemoteSpace;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.URL;
-import java.util.*;
 
 /**
  * Controls the main Sketchify game scene (sketchify-page.fxml), including
@@ -145,27 +152,24 @@ public class SketchifyController implements Initializable {
     //                  TIMELINE LOGIC
     // -------------------------------------------------------------------------
     private void initializeTimeline() {
-        if (myRole.equalsIgnoreCase("Host")) {
-            timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-                if (seconds > 0) {
-                    seconds--;
-                    Timer.setText("Time: " + seconds + " s");
-                } else {
-                    Timer.setText("Time's up!");
-                    timeline.stop();
-                    // If time is up, we might start a new round or let the host do so
-                    try {
-                        generateNewRound();
-                    } catch (InterruptedException ex) {
-                        throw new RuntimeException(ex);
-                    }
+        timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            if (seconds > 0) {
+                seconds--;
+                Timer.setText("Time: " + seconds + " s");
+            } else {
+                Timer.setText("Time's up!");
+                timeline.stop();
+                // If time is up, we might start a new round or let the host do so
+                try {
+                    generateNewRound();
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
                 }
-            }));
-            timeline.setCycleCount(Timeline.INDEFINITE);
-            timeline.play();
-        }
+            }
+        }));
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.play();
     }
-
 
     // -------------------------------------------------------------------------
     //                  NEW ROUND & DRAWER SELECTION
@@ -197,6 +201,11 @@ public class SketchifyController implements Initializable {
                     new ActualField("drawer"),
                     new FormalField(String.class)
             );
+
+            clearDrawingTuples();
+
+            gc = Canvas.getGraphicsContext2D();
+
             // (If oldWord != null, we just ignore it since we want a fresh word)
 
             // 2) pick random user as new drawer
@@ -215,10 +224,17 @@ public class SketchifyController implements Initializable {
             e.printStackTrace();
         }
         timeline.playFromStart();
-        setClearCanvas(new ActionEvent());
         isolateDrawerAndGuesser();
     }
 
+    private void clearDrawingTuples() {
+        try {
+            while (drawSpace.getp(new ActualField("draw"), new FormalField(Integer.class), new FormalField(Integer.class), new ActualField("draw")) != null) {
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Picks a random user from the "user" tuples in gameSpace.
@@ -382,13 +398,7 @@ public class SketchifyController implements Initializable {
     public void setClearCanvas(ActionEvent event) throws InterruptedException {
         if (isDrawer) {
             try {
-                // increment round so new strokes won't mix with old
-                currentRoundID++;
-                // clear local canvas
-                gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
-
-                // broadcast the "clear" with new round
-                drawSpace.put("draw", currentRoundID, 0.0, 0.0, "clear");
+                drawSpace.put("draw", 0.0, 0.0, "clear");
 
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -405,7 +415,7 @@ public class SketchifyController implements Initializable {
             double x = event.getX();
             double y = event.getY();
             try {
-                drawSpace.put("draw", currentRoundID, x, y, "start");
+                drawSpace.put("draw", x, y, "start");
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 ex.printStackTrace();
@@ -416,7 +426,7 @@ public class SketchifyController implements Initializable {
             double x = event.getX();
             double y = event.getY();
             try {
-                drawSpace.put("draw",currentRoundID, x, y, "draw");
+                drawSpace.put("draw", x, y, "draw");
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 ex.printStackTrace();
@@ -453,6 +463,7 @@ public class SketchifyController implements Initializable {
         if (!guessedCorrectly && guess.equalsIgnoreCase(word)) {
             guessedCorrectly = true;
             Platform.runLater(() -> Chat.appendText("Correct guess!\n"));
+            drawSpace.put("draw", 0.0, 0.0, "clear");
             // For simplicity, automatically start a new round now
             generateNewRound();
         }
@@ -486,23 +497,19 @@ public class SketchifyController implements Initializable {
     private void listenForDraws() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                // We remove new draw events from the space
-                List<Object[]> newDraws = drawSpace.getAll(
+                // remove new draws from the space
+                List<Object[]> newDraws = drawSpace.queryAll(
                         new ActualField("draw"),
-                        new FormalField(Integer.class),  // round ID
                         new FormalField(Double.class),
                         new FormalField(Double.class),
                         new FormalField(String.class)
                 );
-
-                for (Object[] tuple : newDraws) {
-                    int roundId = (int) tuple[1];
-                    double dx = (double) tuple[2];
-                    double dy = (double) tuple[3];
-                    String action = (String) tuple[4];
-
-                    // Only process strokes if roundId == currentRoundID
-                    if (roundId == currentRoundID) {
+                if (newDraws.size() > lastDrawCount) {
+                    for (int i = lastDrawCount; i<newDraws.size(); i++) {
+                        Object[] tuple = newDraws.get(i);
+                        double dx = (double) tuple[1];
+                        double dy = (double) tuple[2];
+                        String action = (String) tuple[3];
                         Platform.runLater(() -> {
                             if ("clear".equals(action)) {
                                 gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
@@ -516,10 +523,10 @@ public class SketchifyController implements Initializable {
                             }
                         });
                     }
-                    // else: skip draws from old rounds
+                    lastDrawCount = newDraws.size();
                 }
-                Thread.sleep(40);
-            } catch (InterruptedException e) {
+                }
+                catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
             }

@@ -1,16 +1,16 @@
 package GUI;
 
+import java.io.IOException;
+import java.util.Objects;
+
+import org.jspace.RemoteSpace;
+
 import Sketchify.ChatServer;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import org.jspace.RemoteSpace;
-
-import java.io.IOException;
-import java.net.ConnectException;
-import java.util.Objects;
 
 public class LoginPage extends Application {
     public static String role = "";
@@ -22,7 +22,7 @@ public class LoginPage extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         // 1. Check if there's already a server by attempting a client connection
-        String testURI = "tcp://192.168.8.69:8753/chat?keep";
+        String testURI = "tcp://192.168.0.247:8753/chat?keep";
         boolean serverRunning = isServerRunning(testURI);
         role = "Client";
 
