@@ -105,7 +105,8 @@ public class SketchifyController implements Initializable {
         startThreads();
 
         // Create the timeline that decrements 'seconds' every 1s
-        initializeTimeline();
+        startHostTimer();
+        listenForGlobalTimer();
 
         // ***** Start a round right away *****
         // This ensures the round begins on initialization
@@ -144,24 +145,88 @@ public class SketchifyController implements Initializable {
     // -------------------------------------------------------------------------
     //                  TIMELINE LOGIC
     // -------------------------------------------------------------------------
-    private void initializeTimeline() {
-        timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            if (seconds > 0) {
-                seconds--;
-                Timer.setText("Time: " + seconds + " s");
-            } else {
-                Timer.setText("Time's up!");
-                timeline.stop();
-                // If time is up, we might start a new round or let the host do so
-                try {
-                    generateNewRound();
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException(ex);
+//    private void initializeTimeline() {
+//        if (myRole.equalsIgnoreCase("Host")) {
+//            timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+//                if (seconds > 0) {
+//                    seconds--;
+//                    Timer.setText("Time: " + seconds + " s");
+//                } else {
+//                    Timer.setText("Time's up!");
+//                    timeline.stop();
+//                    // If time is up, we might start a new round or let the host do so
+//                    try {
+//                        generateNewRound();
+//                    } catch (InterruptedException ex) {
+//                        throw new RuntimeException(ex);
+//                    }
+//                }
+//            }));
+//            timeline.setCycleCount(Timeline.INDEFINITE);
+//            timeline.play();
+//        }
+//    }
+
+    private void startHostTimer() {
+        if (myRole.equalsIgnoreCase("Host")) {
+            final int initialSeconds = 60;
+            seconds = initialSeconds;
+
+            // Example: a Timeline to decrement 'seconds' from 60 down to 0
+            timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+                if (seconds > 0) {
+                    seconds--;
+                    Timer.setText("Time: " + seconds + " s");
+                    // Put the new timer value into the space
+                    try {
+                        // Remove any old timer value if you want
+                        gameSpace.getp(new ActualField("game"), new ActualField("timer"), new FormalField(Integer.class));
+
+                        // Insert the updated timer
+                        gameSpace.put("game", "timer", seconds);
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                        ex.printStackTrace();
+                    }
+                } else {
+                    timeline.stop();
+                    // Possibly start a new round or do something else
+                    // ...
                 }
-            }
-        }));
-        timeline.setCycleCount(Timeline.INDEFINITE);
-        timeline.play();
+            }));
+            timeline.setCycleCount(Timeline.INDEFINITE);
+            timeline.play();
+        }
+    }
+
+    private void listenForGlobalTimer() {
+        if (myRole.equalsIgnoreCase("Client")) {
+            Thread timerThread = new Thread(() -> {
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        // Wait for the latest ("game","timer", int) tuple
+                        // Possibly we do a blocking `query` that re-checks each second
+                        // Or we can do getp(...) in a loop for updates.
+
+                        Object[] t = gameSpace.query(new ActualField("game"), new ActualField("timer"), new FormalField(Integer.class));
+                        int serverSeconds = (int) t[2];
+
+                        Platform.runLater(() -> {
+                            Timer.setText("Time: " + serverSeconds + " s");
+                        });
+
+                        // Sleep a bit or do some blocking approach repeatedly
+                        Thread.sleep(500);
+
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }, "GlobalTimerListener");
+            timerThread.setDaemon(true);
+            timerThread.start();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -212,6 +277,7 @@ public class SketchifyController implements Initializable {
             e.printStackTrace();
         }
         timeline.playFromStart();
+        setClearCanvas(new ActionEvent());
         isolateDrawerAndGuesser();
     }
 
@@ -378,7 +444,13 @@ public class SketchifyController implements Initializable {
     public void setClearCanvas(ActionEvent event) throws InterruptedException {
         if (isDrawer) {
             try {
-                drawSpace.put("draw", 0.0, 0.0, "clear");
+                // increment round so new strokes won't mix with old
+                currentRoundID++;
+                // clear local canvas
+                gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
+
+                // broadcast the "clear" with new round
+                drawSpace.put("draw", currentRoundID, 0.0, 0.0, "clear");
 
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -395,7 +467,7 @@ public class SketchifyController implements Initializable {
             double x = event.getX();
             double y = event.getY();
             try {
-                drawSpace.put("draw", x, y, "start");
+                drawSpace.put("draw", currentRoundID, x, y, "start");
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 ex.printStackTrace();
@@ -406,7 +478,7 @@ public class SketchifyController implements Initializable {
             double x = event.getX();
             double y = event.getY();
             try {
-                drawSpace.put("draw", x, y, "draw");
+                drawSpace.put("draw",currentRoundID, x, y, "draw");
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 ex.printStackTrace();
@@ -476,29 +548,37 @@ public class SketchifyController implements Initializable {
     private void listenForDraws() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                // remove new draws from the space
+                // We remove new draw events from the space
                 List<Object[]> newDraws = drawSpace.getAll(
                         new ActualField("draw"),
+                        new FormalField(Integer.class),  // round ID
                         new FormalField(Double.class),
                         new FormalField(Double.class),
                         new FormalField(String.class)
                 );
+
                 for (Object[] tuple : newDraws) {
-                    double dx = (double) tuple[1];
-                    double dy = (double) tuple[2];
-                    String action = (String) tuple[3];
-                    Platform.runLater(() -> {
-                        if ("clear".equals(action)) {
-                            gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
-                        } else if ("start".equals(action)) {
-                            gc.beginPath();
-                            gc.moveTo(dx, dy);
-                            gc.stroke();
-                        } else if ("draw".equals(action)) {
-                            gc.lineTo(dx, dy);
-                            gc.stroke();
-                        }
-                    });
+                    int roundId = (int) tuple[1];
+                    double dx = (double) tuple[2];
+                    double dy = (double) tuple[3];
+                    String action = (String) tuple[4];
+
+                    // Only process strokes if roundId == currentRoundID
+                    if (roundId == currentRoundID) {
+                        Platform.runLater(() -> {
+                            if ("clear".equals(action)) {
+                                gc.clearRect(0, 0, Canvas.getWidth(), Canvas.getHeight());
+                            } else if ("start".equals(action)) {
+                                gc.beginPath();
+                                gc.moveTo(dx, dy);
+                                gc.stroke();
+                            } else if ("draw".equals(action)) {
+                                gc.lineTo(dx, dy);
+                                gc.stroke();
+                            }
+                        });
+                    }
+                    // else: skip draws from old rounds
                 }
                 Thread.sleep(40);
             } catch (InterruptedException e) {
