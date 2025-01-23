@@ -155,16 +155,9 @@ public class SketchifyController implements Initializable {
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             if (seconds > 0) {
                 seconds--;
-                Timer.setText("Time: " + seconds + " s");
             } else {
-                Timer.setText("Time's up!");
                 timeline.stop();
                 // If time is up, we might start a new round or let the host do so
-                try {
-                    generateNewRound();
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException(ex);
-                }
             }
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);

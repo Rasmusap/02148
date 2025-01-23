@@ -22,7 +22,7 @@ public class LoginPage extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         // 1. Check if there's already a server by attempting a client connection
-        String testURI = "tcp://192.168.0.247:8753/chat?keep";
+        String testURI = "tcp://10.209.248.40:8753/chat?keep";
         boolean serverRunning = isServerRunning(testURI);
         role = "Client";
 

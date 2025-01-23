@@ -25,7 +25,7 @@ public class ChatServer {
         repository.add("draw", drawSpace);
         repository.add("game", gameSpace);
 
-        String gateURI = "tcp://192.168.0.247:8753/?keep";
+        String gateURI = "tcp://10.209.248.40:8753/?keep";
         try {
             repository.addGate(gateURI);
             System.out.println("[Server] Successfully opened gate on " + gateURI);
